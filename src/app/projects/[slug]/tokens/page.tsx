@@ -28,10 +28,11 @@ export default async function TokensPage({
   const mcpUrl = `${scheme}://${host}/mcp/${project.slug}`;
   const path = `/projects/${slug}/tokens`;
 
-  // токен виден только сразу после выпуска — иначе в командах остаётся заглушка
-  const token = issued ?? "<токен>";
+  // команды показываются только вместе со свежим токеном: второй раз его
+  // значение взять неоткуда, а команда с заглушкой вместо токена бесполезна
+  const token = issued;
   const server = `deckbook-${project.slug}`;
-  const clients = [
+  const clients = !token ? [] : [
     {
       title: "Claude Code",
       snippet: `claude mcp add --transport http ${server} ${mcpUrl} --header "Authorization: Bearer ${token}"`,
@@ -74,6 +75,18 @@ export default async function TokensPage({
           <div className="notice">
             <strong>Токен выпущен — значение показывается один раз:</strong>
             <CopyField value={issued} />
+
+            <h2>Подключить агента</h2>
+            <p className="muted">
+              В командах уже подставлен этот токен — их можно вставить в терминал как есть.
+            </p>
+            {clients.map((client) => (
+              <div key={client.title}>
+                <h3>{client.title}</h3>
+                <CopySnippet value={client.snippet} />
+                {client.note && <p className="muted">{client.note}</p>}
+              </div>
+            ))}
           </div>
         )}
 
@@ -82,21 +95,6 @@ export default async function TokensPage({
         <p className="muted">
           Агент подключается по этому адресу с заголовком <code>Authorization: Bearer …</code>.
         </p>
-
-        <h2>Подключить агента</h2>
-        {!issued && (
-          <p className="muted">
-            Значение токена показывается один раз при выпуске — сейчас в командах стоит заглушка{" "}
-            <code>&lt;токен&gt;</code>.
-          </p>
-        )}
-        {clients.map((client) => (
-          <div key={client.title}>
-            <h3>{client.title}</h3>
-            <CopySnippet value={client.snippet} />
-            {client.note && <p className="muted">{client.note}</p>}
-          </div>
-        ))}
 
         <h2>Выпустить токен</h2>
         <form className="row" method="post" action="/api/tokens">
