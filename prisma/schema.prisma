@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Владелец. Строка ровно одна; пароль приходит из переменной окружения
+/// при первом входе и хранится хешем.
+model Owner {
+  id           Int    @id @default(1)
+  passwordHash String
+  /// растёт на каждом выходе — старые cookie перестают действовать сразу,
+  /// в том числе на устройстве, которое осталось где-то ещё
+  sessionEpoch Int    @default(0)
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  tokens    Token[]
+  tasks     Task[]
+  documents Document[]
+}
+
+model Token {
+  id         String    @id @default(cuid())
+  name       String
+  hash       String    @unique
+  projectId  String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  project        Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTasks  Task[]     @relation("assignee")
+  createdTasks   Task[]     @relation("taskCreator")
+  comments       Comment[]
+  editedDocs     Document[] @relation("docEditor")
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+  cancelled
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  /// null только у глобального шаблона (ADR-0001)
+  projectId   String?
+  parentId    String?
+  title       String
+  description String     @default("")
+  status      TaskStatus @default(todo)
+  isTemplate  Boolean    @default(false)
+  /// интервал повторения в днях; null у обычной задачи
+  recurrence  Int?
+  /// дата, которая сдвигается при закрытии рекуррентной задачи
+  dueAt        DateTime?
+  lastClosedAt DateTime?
+
+  assigneeTokenId  String?
+  createdByTokenId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent    Task?    @relation("subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Task[]   @relation("subtasks")
+  assignee  Token?   @relation("assignee", fields: [assigneeTokenId], references: [id], onDelete: SetNull)
+  createdBy Token?   @relation("taskCreator", fields: [createdByTokenId], references: [id], onDelete: SetNull)
+  comments  Comment[]
+
+  @@index([projectId, isTemplate])
+  @@index([parentId])
+}
+
+enum CommentKind {
+  human
+  system
+}
+
+model Comment {
+  id            String      @id @default(cuid())
+  taskId        String
+  kind          CommentKind
+  body          String
+  /// null означает владельца
+  authorTokenId String?
+  createdAt     DateTime    @default(now())
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author Token? @relation(fields: [authorTokenId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+}
+
+model Document {
+  id        String  @id @default(cuid())
+  projectId String
+  parentId  String?
+  name      String
+  isFolder  Boolean @default(false)
+  content   String  @default("")
+
+  updatedByTokenId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent    Document?  @relation("docTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Document[] @relation("docTree")
+  updatedBy Token?     @relation("docEditor", fields: [updatedByTokenId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, parentId])
+}
