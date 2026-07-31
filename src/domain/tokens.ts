@@ -8,6 +8,13 @@ const hashToken = (value: string) => createHash("sha256").update(value).digest("
 export const ISSUED_COOKIE = "deckbook_issued_token";
 
 /**
+ * Заголовок, которым middleware передаёт значение странице. Нужен потому,
+ * что серверный компонент куки читать умеет, а гасить — нет: без этого
+ * значение переживало бы перезагрузку страницы всю минуту жизни куки.
+ */
+export const ISSUED_HEADER = "x-deckbook-issued-token";
+
+/**
  * Выпускает токен на проект. Значение возвращается один раз —
  * в базе остаётся только хеш.
  */
