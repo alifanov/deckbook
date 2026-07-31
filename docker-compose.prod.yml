@@ -1,0 +1,15 @@
+# Прод-деплой в Coolify. Postgres здесь нет — он уже поднят рядом,
+# его адрес приходит переменной DATABASE_URL.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      # ponytail: домен и роутинг проставляет сам Coolify по этой переменной
+      SERVICE_FQDN_APP_3000:
+      DATABASE_URL: ${DATABASE_URL}
+      OWNER_PASSWORD: ${OWNER_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      PORT: 3000
+    expose:
+      - 3000

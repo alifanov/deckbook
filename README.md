@@ -3,7 +3,7 @@
 Личный self-hosted трекер задач, у которого MCP — основной интерфейс: задачи
 создают и меняют AI-агенты наравне с владельцем. См. `CONTEXT.md` и `docs/adr/`.
 
-## Запуск
+## Запуск у себя
 
 ```sh
 cp .env.example .env      # задать OWNER_PASSWORD и SESSION_SECRET
@@ -21,6 +21,16 @@ docker compose up -d
 | `SESSION_SECRET` | ключ подписи cookie сессии                              |
 | `DATABASE_URL`   | адрес Postgres (в compose проставлен автоматически)     |
 | `APP_PORT`       | порт на хосте, по умолчанию 3000                        |
+
+## Деплой в Coolify
+
+`docker-compose.prod.yml` — тот же образ, но без Postgres: база уже поднята
+в Coolify, её адрес приходит переменной `DATABASE_URL`.
+
+1. New Resource → Docker Compose, репозиторий этот, файл `docker-compose.prod.yml`.
+2. Задать переменные: `DATABASE_URL`, `OWNER_PASSWORD`, `SESSION_SECRET`.
+3. В домене сервиса `app` указать свой хост — Coolify сам проставит его
+   в `SERVICE_FQDN_APP_3000` и настроит роутинг на порт 3000.
 
 ## Подключение агента
 
