@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { CopyField } from "../../../../copy";
+import { CopyField, CopySnippet } from "../../../../copy";
 import { getProjectBySlug } from "../../../../domain/projects";
 import { ISSUED_COOKIE, listTokens } from "../../../../domain/tokens";
 import { Back, Banner, Header, ProjectNav, when } from "../../../../ui";
@@ -28,6 +28,39 @@ export default async function TokensPage({
   const mcpUrl = `${scheme}://${host}/mcp/${project.slug}`;
   const path = `/projects/${slug}/tokens`;
 
+  // токен виден только сразу после выпуска — иначе в командах остаётся заглушка
+  const token = issued ?? "<токен>";
+  const server = `deckbook-${project.slug}`;
+  const clients = [
+    {
+      title: "Claude Code",
+      snippet: `claude mcp add --transport http ${server} ${mcpUrl} --header "Authorization: Bearer ${token}"`,
+    },
+    {
+      title: "Codex",
+      snippet: `export DECKBOOK_TOKEN=${token} && codex mcp add ${server} --url ${mcpUrl} --bearer-token-env-var DECKBOOK_TOKEN`,
+      note: "Codex хранит имя переменной, а не значение — DECKBOOK_TOKEN нужно прописать в профиль оболочки, иначе после перезапуска терминала подключение отвалится.",
+    },
+    {
+      title: "OpenCode",
+      snippet: JSON.stringify(
+        {
+          mcp: {
+            [server]: {
+              type: "remote",
+              url: mcpUrl,
+              headers: { Authorization: `Bearer ${token}` },
+              enabled: true,
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      note: "У opencode нет флагов для неинтерактивного добавления — блок кладётся в ~/.config/opencode/opencode.json.",
+    },
+  ];
+
   return (
     <>
       <Header>
@@ -49,6 +82,21 @@ export default async function TokensPage({
         <p className="muted">
           Агент подключается по этому адресу с заголовком <code>Authorization: Bearer …</code>.
         </p>
+
+        <h2>Подключить агента</h2>
+        {!issued && (
+          <p className="muted">
+            Значение токена показывается один раз при выпуске — сейчас в командах стоит заглушка{" "}
+            <code>&lt;токен&gt;</code>.
+          </p>
+        )}
+        {clients.map((client) => (
+          <div key={client.title}>
+            <h3>{client.title}</h3>
+            <CopySnippet value={client.snippet} />
+            {client.note && <p className="muted">{client.note}</p>}
+          </div>
+        ))}
 
         <h2>Выпустить токен</h2>
         <form className="row" method="post" action="/api/tokens">

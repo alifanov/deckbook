@@ -107,6 +107,38 @@ form.row input[type="text"] {
   min-width: 180px;
 }
 
+/* поле «скопировать» живёт вне формы, а flex-правила были только у form.row —
+   поэтому значение обрезалось по ширине input */
+.row.copy {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+.row.copy input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.snippet {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0;
+}
+.snippet pre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
