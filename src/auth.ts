@@ -1,14 +1,11 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
-import { SESSION_COOKIE, SESSION_DAYS, isValidSession, signSession } from "./session";
+import { SESSION_COOKIE, SESSION_DAYS, equal, isValidSession, signSession } from "./session";
 
 function scrypt(password: string, salt: string) {
   return scryptSync(password, salt, 64).toString("hex");
 }
-
-const equal = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 /**
  * Пароль владельца приходит переменной окружения при первом запуске

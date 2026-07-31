@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { OWNER } from "../src/domain/actor";
+import { OWNER } from "../src/domain/author";
 import { addComment } from "../src/domain/comments";
 import { prisma } from "../src/db";
-import {
-  applyTemplate,
-  listTemplates,
-  markAsTemplate,
-  setTemplateScope,
-} from "../src/domain/templates";
+import { applyTemplate, listTemplates, markAsTemplate } from "../src/domain/templates";
 import {
   assignTask,
   createTask,
@@ -26,7 +21,7 @@ async function makeBugfixTemplate(projectId: string, global = false) {
   );
   await createTask({ projectId, parentId: tests.id, title: "Прогнать линт" }, OWNER);
   await createTask({ projectId, parentId: root.id, title: "Билд" }, OWNER);
-  await markAsTemplate(root.id, global);
+  await markAsTemplate(root.id, { global });
   return root;
 }
 
@@ -143,7 +138,7 @@ describe("шаблоны", () => {
     const other = await makeProject("Другой");
     await makeBugfixTemplate(home.id);
     const global = await createTask({ projectId: other.id, title: "Глобальный" }, OWNER);
-    await markAsTemplate(global.id, true);
+    await markAsTemplate(global.id, { global: true });
 
     expect((await listTemplates(home.id)).map((t) => t.title).sort()).toEqual([
       "Глобальный",
@@ -155,7 +150,9 @@ describe("шаблоны", () => {
     const project = await makeProject();
     const template = await makeBugfixTemplate(project.id);
 
-    expect((await setTemplateScope(template.id, true, project.id))?.projectId).toBeNull();
-    expect((await setTemplateScope(template.id, false, project.id))?.projectId).toBe(project.id);
+    expect((await markAsTemplate(template.id, { global: true })).projectId).toBeNull();
+    expect(
+      (await markAsTemplate(template.id, { global: false, projectId: project.id })).projectId,
+    ).toBe(project.id);
   });
 });

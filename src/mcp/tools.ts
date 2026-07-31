@@ -1,27 +1,27 @@
-import type { Actor } from "../domain/actor";
+import type { Author } from "../domain/author";
 import { addComment, listComments } from "../domain/comments";
 import {
   createDocument,
   createFolder,
-  getDocument,
   listDocumentTree,
   moveNode,
+  requireDocumentInProject,
   writeDocument,
   type DocumentNode,
 } from "../domain/documents";
 import { fail } from "../domain/errors";
 import {
+  claimTask,
   createTask,
   getTaskTree,
   listTasks,
   moveTask,
   parseStatus,
+  requireTaskInProject,
   setStatus,
-  assignTask,
   type TaskNode,
 } from "../domain/tasks";
 import { applyTemplate, listTemplates } from "../domain/templates";
-import { prisma } from "../db";
 
 /** Проект и агент берутся из адреса и токена — инструменту их не передают. */
 export type McpContext = {
@@ -29,7 +29,7 @@ export type McpContext = {
   projectName: string;
   projectSlug: string;
   tokenId: string;
-  actor: Actor;
+  author: Author;
 };
 
 type JsonSchema = {
@@ -47,22 +47,10 @@ export type Tool = {
 
 const str = (description: string) => ({ type: "string", description });
 
-/** Задача внутри проекта агента — иначе он вышел за границу (ADR-0003). */
-async function requireOwnTask(id: string, ctx: McpContext) {
-  const task = await prisma.task.findUnique({ where: { id } });
-  if (!task || task.projectId !== ctx.projectId || task.isTemplate) {
-    fail(`Задачи ${id} нет в проекте «${ctx.projectName}» — доступны только задачи этого проекта`);
-  }
-  return task;
-}
-
-async function requireOwnDocument(id: string, ctx: McpContext) {
-  const node = await prisma.document.findUnique({ where: { id } });
-  if (!node || node.projectId !== ctx.projectId) {
-    fail(`Документа ${id} нет в проекте «${ctx.projectName}» — доступен только этот проект`);
-  }
-  return node;
-}
+// границу проекта проверяет домен: правило одно на обе поверхности
+const requireOwnTask = (id: string, ctx: McpContext) => requireTaskInProject(id, ctx.projectId);
+const requireOwnDocument = (id: string, ctx: McpContext) =>
+  requireDocumentInProject(id, ctx.projectId);
 
 const renderTask = (task: TaskNode | Awaited<ReturnType<typeof getTaskTree>>): unknown => ({
   id: task.id,
@@ -141,7 +129,7 @@ export const TOOLS: Tool[] = [
           title: args.title,
           description: args.description,
         },
-        ctx.actor,
+        ctx.author,
       );
       return { id: task.id, title: task.title, status: task.status };
     },
@@ -162,7 +150,7 @@ export const TOOLS: Tool[] = [
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
       if (args.parentTaskId) await requireOwnTask(args.parentTaskId, ctx);
-      const task = await moveTask(args.taskId, args.parentTaskId ?? null, ctx.actor);
+      const task = await moveTask(args.taskId, args.parentTaskId ?? null, ctx.author);
       return { id: task.id, parentTaskId: task.parentId };
     },
   },
@@ -178,7 +166,7 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
-      const task = await setStatus(args.taskId, parseStatus(args.status), ctx.actor);
+      const task = await setStatus(args.taskId, parseStatus(args.status), ctx.author);
       return { id: task.id, status: task.status, dueAt: task.dueAt };
     },
   },
@@ -193,8 +181,7 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
-      await assignTask(args.taskId, ctx.tokenId, ctx.actor);
-      const task = await setStatus(args.taskId, "in_progress", ctx.actor);
+      const task = await claimTask(args.taskId, ctx.tokenId);
       return { id: task.id, status: task.status };
     },
   },
@@ -225,7 +212,7 @@ export const TOOLS: Tool[] = [
       const root = await applyTemplate(
         args.templateId,
         { projectId: ctx.projectId, parentId: args.parentTaskId ?? null },
-        ctx.actor,
+        ctx.author,
       );
       return renderTask(await getTaskTree(root.id));
     },
@@ -240,7 +227,7 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
-      const comment = await addComment(args.taskId, args.body, ctx.actor);
+      const comment = await addComment(args.taskId, args.body, ctx.author);
       return { id: comment.id };
     },
   },
@@ -306,7 +293,7 @@ export const TOOLS: Tool[] = [
           name: args.name,
           content: args.content ?? "",
         },
-        ctx.actor,
+        ctx.author,
       );
       return { id: doc.id, name: doc.name };
     },
@@ -323,7 +310,7 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnDocument(args.documentId, ctx);
-      const doc = await writeDocument(args.documentId, args.content, ctx.actor);
+      const doc = await writeDocument(args.documentId, args.content, ctx.author);
       return { id: doc.id, updatedAt: doc.updatedAt };
     },
   },
@@ -339,7 +326,7 @@ export const TOOLS: Tool[] = [
       if (args.parentFolderId) await requireOwnDocument(args.parentFolderId, ctx);
       const folder = await createFolder(
         { projectId: ctx.projectId, parentId: args.parentFolderId ?? null, name: args.name },
-        ctx.actor,
+        ctx.author,
       );
       return { id: folder.id, name: folder.name };
     },
@@ -360,7 +347,7 @@ export const TOOLS: Tool[] = [
     run: async (args, ctx) => {
       await requireOwnDocument(args.documentId, ctx);
       if (args.parentFolderId) await requireOwnDocument(args.parentFolderId, ctx);
-      const node = await moveNode(args.documentId, args.parentFolderId ?? null, ctx.actor);
+      const node = await moveNode(args.documentId, args.parentFolderId ?? null, ctx.author);
       return { id: node.id, parentFolderId: node.parentId };
     },
   },

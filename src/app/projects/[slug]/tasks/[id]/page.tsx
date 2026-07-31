@@ -39,7 +39,9 @@ export default async function TaskPage({
 
   const project = await getProjectBySlug(slug);
   const task = await getTask(id);
-  if (!project || !task || task.projectId !== project.id) notFound();
+  // глобальный шаблон живёт вне проектов, но правится из любого (ADR-0001)
+  const reachable = task && (task.projectId === project?.id || (task.isTemplate && !task.projectId));
+  if (!project || !task || !reachable) notFound();
 
   const [tree, feed, tokens, candidates] = await Promise.all([
     getTaskTree(id),
@@ -166,8 +168,8 @@ export default async function TaskPage({
         {feed.map((entry) => (
           <div className={`feed-entry ${entry.kind}`} key={entry.id}>
             <div className="muted">
-              {entry.kind === "system" ? "система" : (entry.author?.name ?? "владелец")} ·{" "}
-              {when(entry.createdAt)}
+              {entry.author?.name ?? "владелец"}
+              {entry.kind === "system" && " · система"} · {when(entry.createdAt)}
             </div>
             <div>{entry.body}</div>
           </div>

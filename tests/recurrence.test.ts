@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OWNER } from "../src/domain/actor";
+import { OWNER } from "../src/domain/author";
 import { prisma } from "../src/db";
 import { createTask, setRecurrence, setStatus } from "../src/domain/tasks";
 import { makeProject } from "./helpers";

@@ -3,7 +3,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const SESSION_COOKIE = "deckbook_session";
 export const SESSION_DAYS = 30;
 
-const equal = (a: string, b: string) =>
+/** Сравнение секретов за постоянное время. */
+export const equal = (a: string, b: string) =>
   a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 function secret(): string {

@@ -1,4 +1,4 @@
-import { OWNER } from "../../../domain/actor";
+import { OWNER } from "../../../domain/author";
 import { addComment } from "../../../domain/comments";
 import {
   assignTask,
@@ -10,7 +10,7 @@ import {
   setStatus,
   updateTask,
 } from "../../../domain/tasks";
-import { applyTemplate, markAsTemplate, setTemplateScope } from "../../../domain/templates";
+import { applyTemplate, markAsTemplate } from "../../../domain/templates";
 import { formHandler, optional, text } from "../../../http";
 
 export const POST = formHandler(async (form) => {
@@ -60,11 +60,10 @@ export const POST = formHandler(async (form) => {
       return;
 
     case "make-template":
-      await markAsTemplate(id, text(form, "scope") === "global");
-      return;
-
-    case "template-scope":
-      await setTemplateScope(id, text(form, "scope") === "global", text(form, "projectId"));
+      await markAsTemplate(id, {
+        global: text(form, "scope") === "global",
+        projectId: optional(form, "projectId") ?? undefined,
+      });
       return;
 
     case "apply-template":

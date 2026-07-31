@@ -1,20 +1,20 @@
 import { prisma } from "../db";
-import type { Actor } from "./actor";
+import type { Author } from "./author";
 import { fail } from "./errors";
 
 /** Лента задачи: и комментарии, и системные записи (ADR-0002). */
-export async function addComment(taskId: string, body: string, actor: Actor) {
+export async function addComment(taskId: string, body: string, author: Author) {
   const text = body.trim();
   if (!text) fail("Пустой комментарий");
   return prisma.comment.create({
-    data: { taskId, body: text, kind: "human", authorTokenId: actor.tokenId },
+    data: { taskId, body: text, kind: "human", authorTokenId: author.tokenId },
   });
 }
 
 /** Системная запись — готовый текст, структуры изменения не хранится. */
-export function recordSystem(taskId: string, body: string, actor: Actor) {
+export function recordSystem(taskId: string, body: string, author: Author) {
   return prisma.comment.create({
-    data: { taskId, body, kind: "system", authorTokenId: actor.tokenId },
+    data: { taskId, body, kind: "system", authorTokenId: author.tokenId },
   });
 }
 

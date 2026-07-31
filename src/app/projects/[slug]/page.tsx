@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectBySlug } from "../../../domain/projects";
-import { listProjectTree, listTasks, STATUSES, type TaskNode } from "../../../domain/tasks";
+import {
+  asStatus,
+  listProjectTree,
+  listTasks,
+  STATUSES,
+  type TaskNode,
+} from "../../../domain/tasks";
 import { listTokens } from "../../../domain/tokens";
 import { Back, Banner, Header, ProjectNav } from "../../../ui";
 
@@ -23,7 +29,10 @@ function Branch({ node, slug }: { node: TaskNode; slug: string }) {
     <li>
       <details open>
         <summary>
-          {link} <span className="muted">({node.children.length})</span>
+          {link}{" "}
+          <span className="muted">
+            {node.parentId === null ? "эпик" : "подзадачи"}: {node.children.length}
+          </span>
         </summary>
         <ul className="tree">
           {node.children.map((child) => (
@@ -47,11 +56,12 @@ export default async function ProjectTasksPage({
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
-  const filtering = Boolean(status || assignee);
+  const wanted = asStatus(status);
+  const filtering = Boolean(wanted || assignee);
   const tree = filtering ? [] : await listProjectTree(project.id);
   const flat = filtering
     ? await listTasks(project.id, {
-        ...(status ? { status: status as (typeof STATUSES)[number] } : {}),
+        ...(wanted ? { status: wanted } : {}),
         ...(assignee ? { assigneeTokenId: assignee } : {}),
       })
     : [];

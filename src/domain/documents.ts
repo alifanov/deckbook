@@ -1,13 +1,23 @@
 import { prisma } from "../db";
-import type { Actor } from "./actor";
+import type { Author } from "./author";
 import { fail } from "./errors";
+import { buildTree, type Node } from "./tree";
 import type { Document } from "../generated/prisma/client";
 
-export type DocumentNode = Document & { children: DocumentNode[] };
+export type DocumentNode = Node<Document>;
 
 async function requireNode(id: string) {
   const node = await prisma.document.findUnique({ where: { id } });
   if (!node) fail("Документа или папки не существует");
+  return node;
+}
+
+/** Документ или папка существует и лежит в этом проекте — граница агента (ADR-0003). */
+export async function requireDocumentInProject(id: string, projectId: string) {
+  const node = await prisma.document.findUnique({ where: { id } });
+  if (!node || node.projectId !== projectId) {
+    fail(`Документа ${id} нет в этом проекте — доступен только текущий проект`);
+  }
   return node;
 }
 
@@ -27,7 +37,7 @@ async function create(
     isFolder: boolean;
     content?: string;
   },
-  actor: Actor,
+  author: Author,
 ) {
   const name = input.name.trim();
   if (!name) fail("Название не может быть пустым");
@@ -40,42 +50,42 @@ async function create(
       name,
       isFolder: input.isFolder,
       content: input.isFolder ? "" : (input.content ?? ""),
-      updatedByTokenId: actor.tokenId,
+      updatedByTokenId: author.tokenId,
     },
   });
 }
 
 export const createFolder = (
   input: { projectId: string; parentId?: string | null; name: string },
-  actor: Actor,
-) => create({ ...input, isFolder: true }, actor);
+  author: Author,
+) => create({ ...input, isFolder: true }, author);
 
 export const createDocument = (
   input: { projectId: string; parentId?: string | null; name: string; content?: string },
-  actor: Actor,
-) => create({ ...input, isFolder: false }, actor);
+  author: Author,
+) => create({ ...input, isFolder: false }, author);
 
 /** Запись затирает предыдущее содержимое безвозвратно (ADR-0002). */
-export async function writeDocument(id: string, content: string, actor: Actor) {
+export async function writeDocument(id: string, content: string, author: Author) {
   const node = await requireNode(id);
   if (node.isFolder) fail("У папки нет содержимого");
   return prisma.document.update({
     where: { id },
-    data: { content, updatedByTokenId: actor.tokenId },
+    data: { content, updatedByTokenId: author.tokenId },
   });
 }
 
-export async function renameNode(id: string, name: string, actor: Actor) {
+export async function renameNode(id: string, name: string, author: Author) {
   const title = name.trim();
   if (!title) fail("Название не может быть пустым");
   await requireNode(id);
   return prisma.document.update({
     where: { id },
-    data: { name: title, updatedByTokenId: actor.tokenId },
+    data: { name: title, updatedByTokenId: author.tokenId },
   });
 }
 
-export async function moveNode(id: string, newParentId: string | null, actor: Actor) {
+export async function moveNode(id: string, newParentId: string | null, author: Author) {
   const node = await requireNode(id);
   if (newParentId === id) fail("Узел не может быть вложен сам в себя");
 
@@ -89,7 +99,7 @@ export async function moveNode(id: string, newParentId: string | null, actor: Ac
 
   return prisma.document.update({
     where: { id },
-    data: { parentId: newParentId, updatedByTokenId: actor.tokenId },
+    data: { parentId: newParentId, updatedByTokenId: author.tokenId },
   });
 }
 
@@ -100,12 +110,6 @@ export async function deleteNode(id: string) {
 
 export function getDocument(id: string) {
   return prisma.document.findUnique({ where: { id }, include: { updatedBy: true } });
-}
-
-function buildTree(nodes: Document[], parentId: string | null): DocumentNode[] {
-  return nodes
-    .filter((n) => n.parentId === parentId)
-    .map((n) => ({ ...n, children: buildTree(nodes, n.id) }));
 }
 
 export async function listDocumentTree(projectId: string): Promise<DocumentNode[]> {
@@ -125,7 +129,7 @@ const TEXT_EXTENSIONS = [".md", ".txt"];
  */
 export async function importTextFile(
   input: { projectId: string; parentId?: string | null; filename: string; content: string },
-  actor: Actor,
+  author: Author,
 ) {
   const filename = input.filename.trim();
   const extension = filename.slice(filename.lastIndexOf(".")).toLowerCase();
@@ -146,6 +150,6 @@ export async function importTextFile(
       name: filename.slice(0, filename.lastIndexOf(".")),
       content: input.content,
     },
-    actor,
+    author,
   );
 }

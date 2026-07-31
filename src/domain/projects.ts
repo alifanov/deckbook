@@ -32,12 +32,6 @@ export function getProjectBySlug(slug: string) {
   return prisma.project.findUnique({ where: { slug } });
 }
 
-export async function requireProjectBySlug(slug: string) {
-  const project = await getProjectBySlug(slug);
-  if (!project) fail(`Проекта «${slug}» не существует`);
-  return project;
-}
-
 export async function renameProject(id: string, name: string) {
   const title = name.trim();
   if (!title) fail("Название проекта не может быть пустым");

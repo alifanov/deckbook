@@ -1,23 +1,39 @@
 import { prisma } from "../db";
-import type { Actor } from "./actor";
+import type { Author } from "./author";
 import { recordSystem } from "./comments";
 import { fail } from "./errors";
+import { buildTree, type Node } from "./tree";
 import type { Task, TaskStatus } from "../generated/prisma/client";
 
 export const STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
 
-export type TaskNode = Task & { children: TaskNode[] };
+export type TaskNode = Node<Task>;
+
+/** Статус из набора или ничего — набор фиксирован и не настраивается. */
+export const asStatus = (value: string | null | undefined): TaskStatus | null =>
+  (STATUSES as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : null;
 
 export function parseStatus(value: string): TaskStatus {
-  if (!(STATUSES as readonly string[]).includes(value)) {
-    fail(`Статуса «${value}» не существует; допустимы: ${STATUSES.join(", ")}`);
-  }
-  return value as TaskStatus;
+  const status = asStatus(value);
+  if (!status) fail(`Статуса «${value}» не существует; допустимы: ${STATUSES.join(", ")}`);
+  return status;
 }
 
 async function requireTask(id: string) {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) fail("Задачи не существует");
+  return task;
+}
+
+/**
+ * Задача существует и лежит в этом проекте — граница агента (ADR-0003).
+ * Шаблон настоящей задачей не считается: в обычных выборках его нет.
+ */
+export async function requireTaskInProject(id: string, projectId: string) {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task || task.projectId !== projectId || task.isTemplate) {
+    fail(`Задачи ${id} нет в этом проекте — доступны только задачи текущего проекта`);
+  }
   return task;
 }
 
@@ -38,7 +54,7 @@ export async function createTask(
     description?: string;
     isTemplate?: boolean;
   },
-  actor: Actor,
+  author: Author,
 ) {
   const title = input.title.trim();
   if (!title) fail("У задачи должен быть заголовок");
@@ -59,7 +75,7 @@ export async function createTask(
       title,
       description: input.description?.trim() ?? "",
       isTemplate,
-      createdByTokenId: actor.tokenId,
+      createdByTokenId: author.tokenId,
     },
   });
 }
@@ -67,7 +83,7 @@ export async function createTask(
 export async function updateTask(
   id: string,
   input: { title?: string; description?: string },
-  actor: Actor,
+  author: Author,
 ) {
   const before = await requireTask(id);
   const data: { title?: string; description?: string } = {};
@@ -83,13 +99,13 @@ export async function updateTask(
   if (Object.keys(data).length === 0) return before;
 
   const task = await prisma.task.update({ where: { id }, data });
-  if (data.title) await recordSystem(id, `Заголовок изменён на «${data.title}»`, actor);
-  if (data.description !== undefined) await recordSystem(id, "Описание изменено", actor);
+  if (data.title) await recordSystem(id, `Заголовок изменён на «${data.title}»`, author);
+  if (data.description !== undefined) await recordSystem(id, "Описание изменено", author);
   return task;
 }
 
 /** Перемещение — единственная операция, способная порвать дерево. */
-export async function moveTask(id: string, newParentId: string | null, actor: Actor) {
+export async function moveTask(id: string, newParentId: string | null, author: Author) {
   const task = await requireTask(id);
   if (newParentId === id) fail("Задача не может быть собственным родителем");
 
@@ -109,7 +125,7 @@ export async function moveTask(id: string, newParentId: string | null, actor: Ac
   await recordSystem(
     id,
     newParentId ? "Задача перенесена под другого родителя" : "Задача поднята в корень проекта",
-    actor,
+    author,
   );
   return moved;
 }
@@ -118,7 +134,7 @@ export async function moveTask(id: string, newParentId: string | null, actor: Ac
  * Смена статуса. Закрытие рекуррентной задачи не закрывает её, а возвращает
  * в todo со сдвинутой датой — планировщика в системе нет.
  */
-export async function setStatus(id: string, status: TaskStatus, actor: Actor) {
+export async function setStatus(id: string, status: TaskStatus, author: Author) {
   const task = await requireTask(id);
   if (task.status === status) return task;
 
@@ -132,7 +148,7 @@ export async function setStatus(id: string, status: TaskStatus, actor: Actor) {
     await recordSystem(
       id,
       `Повторяющаяся задача закрыта и открыта заново на ${next.toISOString().slice(0, 10)}`,
-      actor,
+      author,
     );
     return repeated;
   }
@@ -142,11 +158,11 @@ export async function setStatus(id: string, status: TaskStatus, actor: Actor) {
     where: { id },
     data: { status, lastClosedAt: closing ? new Date() : task.lastClosedAt },
   });
-  await recordSystem(id, `Статус: ${task.status} → ${status}`, actor);
+  await recordSystem(id, `Статус: ${task.status} → ${status}`, author);
   return updated;
 }
 
-export async function assignTask(id: string, tokenId: string | null, actor: Actor) {
+export async function assignTask(id: string, tokenId: string | null, author: Author) {
   const task = await requireTask(id);
   if (tokenId) {
     const token = await prisma.token.findUnique({ where: { id: tokenId } });
@@ -158,11 +174,18 @@ export async function assignTask(id: string, tokenId: string | null, actor: Acto
     where: { id },
     data: { assigneeTokenId: tokenId },
   });
-  await recordSystem(id, tokenId ? "Задача назначена на агента" : "Назначение снято", actor);
+  await recordSystem(id, tokenId ? "Задача назначена на агента" : "Назначение снято", author);
   return updated;
 }
 
-export async function setRecurrence(id: string, days: number | null, actor: Actor) {
+/** Взять задачу в работу: назначить на себя и перевести в in_progress. */
+export async function claimTask(id: string, tokenId: string) {
+  const author = { tokenId };
+  await assignTask(id, tokenId, author);
+  return setStatus(id, "in_progress", author);
+}
+
+export async function setRecurrence(id: string, days: number | null, author: Author) {
   if (days !== null && (!Number.isInteger(days) || days < 1)) {
     fail("Интервал повторения — целое число дней, не меньше одного");
   }
@@ -173,7 +196,7 @@ export async function setRecurrence(id: string, days: number | null, actor: Acto
   await recordSystem(
     id,
     days === null ? "Повторение снято" : `Задача повторяется каждые ${days} дн.`,
-    actor,
+    author,
   );
   return updated;
 }
@@ -181,12 +204,6 @@ export async function setRecurrence(id: string, days: number | null, actor: Acto
 /** Удаление уносит поддерево и ленту — каскадом на уровне базы. */
 export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
-}
-
-function buildTree(tasks: Task[], rootId: string | null): TaskNode[] {
-  return tasks
-    .filter((t) => t.parentId === rootId)
-    .map((t) => ({ ...t, children: buildTree(tasks, t.id) }));
 }
 
 /** Дерево задач проекта. Шаблоны в обычную выборку не попадают (ADR-0001). */

@@ -2,8 +2,10 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../db";
 import { fail } from "./errors";
 
-const hashToken = (value: string) =>
-  createHash("sha256").update(value).digest("hex");
+const hashToken = (value: string) => createHash("sha256").update(value).digest("hex");
+
+/** Одноразовая кука, в которой выпущенный токен доезжает до страницы показа. */
+export const ISSUED_COOKIE = "deckbook_issued_token";
 
 /**
  * Выпускает токен на проект. Значение возвращается один раз —
@@ -20,9 +22,9 @@ export async function issueToken(projectId: string, name: string) {
   return { token, value };
 }
 
-export function listTokens(projectId?: string) {
+export function listTokens(projectId: string) {
   return prisma.token.findMany({
-    where: projectId ? { projectId } : undefined,
+    where: { projectId },
     include: { project: true },
     orderBy: { createdAt: "asc" },
   });

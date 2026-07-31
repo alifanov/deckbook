@@ -1,4 +1,4 @@
-import { agent } from "../domain/actor";
+import { agent } from "../domain/author";
 import { DomainError } from "../domain/errors";
 import { authenticateToken } from "../domain/tokens";
 import { TOOLS, type McpContext } from "./tools";
@@ -40,7 +40,7 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
     projectName: auth.project.name,
     projectSlug: auth.project.slug,
     tokenId: auth.token.id,
-    actor: agent(auth.token.id),
+    author: agent(auth.token.id),
   };
 
   // уведомления ответа не требуют

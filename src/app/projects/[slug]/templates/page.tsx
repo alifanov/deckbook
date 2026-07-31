@@ -82,7 +82,7 @@ export default async function TemplatesPage({
 
             <form className="row" method="post" action="/api/tasks">
               <Back path={path} />
-              <input type="hidden" name="intent" value="template-scope" />
+              <input type="hidden" name="intent" value="make-template" />
               <input type="hidden" name="id" value={template.id} />
               <input type="hidden" name="projectId" value={project.id} />
               <input

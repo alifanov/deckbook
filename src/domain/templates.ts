@@ -1,32 +1,29 @@
 import { prisma } from "../db";
-import type { Actor } from "./actor";
+import type { Author } from "./author";
 import { fail } from "./errors";
 import type { Task } from "../generated/prisma/client";
 
-/** Шаблон — то же дерево задач с признаком, а не отдельная сущность (ADR-0001). */
-export async function markAsTemplate(taskId: string, global: boolean) {
+/**
+ * Шаблон — то же дерево задач с признаком, а не отдельная сущность (ADR-0001).
+ * Тем же вызовом шаблон переключается между глобальным и проектным:
+ * глобальный отличается только тем, что `projectId` у него null.
+ */
+export async function markAsTemplate(
+  taskId: string,
+  scope: { global: boolean; projectId?: string },
+) {
   const root = await prisma.task.findUnique({ where: { id: taskId } });
   if (!root) fail("Задачи не существует");
   if (root.parentId) fail("Шаблоном становится дерево целиком — начиная с корневой задачи");
 
-  const ids = await subtreeIds(taskId);
-  await prisma.task.updateMany({
-    where: { id: { in: ids } },
-    data: { isTemplate: true, projectId: global ? null : root.projectId },
-  });
-  return prisma.task.findUnique({ where: { id: taskId } });
-}
+  const projectId = scope.global ? null : (scope.projectId ?? root.projectId);
+  if (projectId === null && !scope.global) fail("Проектному шаблону нужен проект");
 
-export async function setTemplateScope(taskId: string, global: boolean, projectId: string) {
-  const root = await prisma.task.findUnique({ where: { id: taskId } });
-  if (!root?.isTemplate) fail("Это не шаблон");
-
-  const ids = await subtreeIds(taskId);
   await prisma.task.updateMany({
-    where: { id: { in: ids } },
-    data: { projectId: global ? null : projectId },
+    where: { id: { in: await subtreeIds(taskId) } },
+    data: { isTemplate: true, projectId },
   });
-  return prisma.task.findUnique({ where: { id: taskId } });
+  return prisma.task.findUniqueOrThrow({ where: { id: taskId } });
 }
 
 /** Шаблоны, доступные проекту: его собственные и глобальные. */
@@ -61,7 +58,7 @@ async function subtreeIds(rootId: string): Promise<string[]> {
 export async function applyTemplate(
   templateId: string,
   target: { projectId: string; parentId?: string | null },
-  actor: Actor,
+  author: Author,
 ) {
   const template = await prisma.task.findUnique({ where: { id: templateId } });
   if (!template?.isTemplate) fail("Это не шаблон");
@@ -76,14 +73,14 @@ export async function applyTemplate(
     if (parent.isTemplate) fail("Разворачивать шаблон внутрь шаблона нельзя");
   }
 
-  return copyInto(template, target.parentId ?? null, target.projectId, actor);
+  return copyInto(template, target.parentId ?? null, target.projectId, author);
 }
 
 async function copyInto(
   source: Task,
   parentId: string | null,
   projectId: string,
-  actor: Actor,
+  author: Author,
 ): Promise<Task> {
   const copy = await prisma.task.create({
     data: {
@@ -94,7 +91,7 @@ async function copyInto(
       status: "todo",
       isTemplate: false,
       recurrence: source.recurrence,
-      createdByTokenId: actor.tokenId,
+      createdByTokenId: author.tokenId,
     },
   });
 
@@ -102,7 +99,7 @@ async function copyInto(
     where: { parentId: source.id },
     orderBy: { createdAt: "asc" },
   });
-  for (const child of children) await copyInto(child, copy.id, projectId, actor);
+  for (const child of children) await copyInto(child, copy.id, projectId, author);
 
   return copy;
 }

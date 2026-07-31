@@ -1,8 +1,8 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CopyField } from "../../../../copy";
 import { getProjectBySlug } from "../../../../domain/projects";
-import { listTokens } from "../../../../domain/tokens";
+import { ISSUED_COOKIE, listTokens } from "../../../../domain/tokens";
 import { Back, Banner, Header, ProjectNav, when } from "../../../../ui";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +12,13 @@ export default async function TokensPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string; issued?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { slug } = await params;
-  const { error, issued } = await searchParams;
+  const { error } = await searchParams;
+  // кука живёт минуту и сама протухает: значение видно один раз, но в адресе
+  // и в логах прокси его нет (страница менять куки не может — только читать)
+  const issued = (await cookies()).get(ISSUED_COOKIE)?.value;
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 

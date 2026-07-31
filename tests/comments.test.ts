@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OWNER, agent } from "../src/domain/actor";
+import { OWNER, agent } from "../src/domain/author";
 import { addComment, listComments } from "../src/domain/comments";
 import { prisma } from "../src/db";
 import {

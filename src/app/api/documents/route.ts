@@ -1,4 +1,4 @@
-import { OWNER } from "../../../domain/actor";
+import { OWNER } from "../../../domain/author";
 import {
   createDocument,
   createFolder,

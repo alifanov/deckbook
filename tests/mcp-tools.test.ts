@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { OWNER } from "../src/domain/actor";
+import { OWNER } from "../src/domain/author";
 import { prisma } from "../src/db";
 import { createTask, setRecurrence } from "../src/domain/tasks";
 import { markAsTemplate } from "../src/domain/templates";
@@ -105,7 +105,7 @@ describe("агент работает через MCP", () => {
   it("разворачивает шаблон", async () => {
     const template = await createTask({ projectId, title: "Исправление бага" }, OWNER);
     await createTask({ projectId, parentId: template.id, title: "Тесты" }, OWNER);
-    await markAsTemplate(template.id, false);
+    await markAsTemplate(template.id, { global: false });
 
     const templates = await tool("list_templates");
     expect(templates).toEqual([{ id: template.id, title: "Исправление бага" }]);
@@ -117,9 +117,9 @@ describe("агент работает через MCP", () => {
 
   it("не видит шаблоны среди задач", async () => {
     const template = await createTask({ projectId, title: "Шаблон" }, OWNER);
-    await markAsTemplate(template.id, false);
+    await markAsTemplate(template.id, { global: false });
 
-    await expect(tool("read_task", { taskId: template.id })).rejects.toThrow(/нет в проекте/);
+    await expect(tool("read_task", { taskId: template.id })).rejects.toThrow(/нет в этом проекте/);
   });
 
   it("ведёт дерево документов: папка, документ, запись, перемещение", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OWNER } from "../src/domain/actor";
+import { OWNER } from "../src/domain/author";
 import { prisma } from "../src/db";
 import { createDocument } from "../src/domain/documents";
 import { createTask } from "../src/domain/tasks";
@@ -98,7 +98,7 @@ describe("изоляция токена на HTTP-шве", () => {
 
     const result = await callTool(mine.slug, value, "read_task", { taskId: secret.id });
     expect(result.isError).toBe(true);
-    expect(result.text).toMatch(/нет в проекте/);
+    expect(result.text).toMatch(/нет в этом проекте/);
   });
 
   it("документ чужого проекта не читается даже по идентификатору", async () => {
@@ -109,7 +109,7 @@ describe("изоляция токена на HTTP-шве", () => {
 
     const result = await callTool(mine.slug, value, "read_document", { documentId: secret.id });
     expect(result.isError).toBe(true);
-    expect(result.text).toMatch(/нет в проекте/);
+    expect(result.text).toMatch(/нет в этом проекте/);
   });
 });
 
