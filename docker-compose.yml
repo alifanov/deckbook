@@ -1,34 +1,15 @@
+# Прод-деплой в Coolify. Postgres здесь нет — он уже поднят рядом,
+# его адрес приходит переменной DATABASE_URL.
 services:
-  db:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: deckbook
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deckbook}
-      POSTGRES_DB: deckbook
-    volumes:
-      - db:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5433}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deckbook"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   app:
     build: .
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://deckbook:${POSTGRES_PASSWORD:-deckbook}@db:5432/deckbook
-      OWNER_PASSWORD: ${OWNER_PASSWORD:?set OWNER_PASSWORD}
-      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      # ponytail: домен и роутинг проставляет сам Coolify по этой переменной
+      SERVICE_FQDN_APP_3000:
+      DATABASE_URL: ${DATABASE_URL}
+      OWNER_PASSWORD: ${OWNER_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
       PORT: 3000
-    ports:
-      - "${APP_PORT:-3000}:3000"
-
-volumes:
-  db:
+    expose:
+      - 3000

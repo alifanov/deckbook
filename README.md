@@ -3,11 +3,14 @@
 Личный self-hosted трекер задач, у которого MCP — основной интерфейс: задачи
 создают и меняют AI-агенты наравне с владельцем. См. `CONTEXT.md` и `docs/adr/`.
 
+Два compose-файла: `docker-compose.yml` — деплой (только приложение, база
+внешняя), `docker-compose.local.yml` — всё своё, вместе с Postgres.
+
 ## Запуск у себя
 
 ```sh
 cp .env.example .env      # задать OWNER_PASSWORD и SESSION_SECRET
-docker compose up -d
+docker compose -f docker-compose.local.yml up -d
 ```
 
 Поднимаются два контейнера — приложение и Postgres, больше ничего не требуется.
@@ -19,15 +22,15 @@ docker compose up -d
 | ---------------- | ------------------------------------------------------ |
 | `OWNER_PASSWORD` | пароль владельца; при первом входе сохраняется хешем    |
 | `SESSION_SECRET` | ключ подписи cookie сессии                              |
-| `DATABASE_URL`   | адрес Postgres (в compose проставлен автоматически)     |
+| `DATABASE_URL`   | адрес Postgres (в local-compose проставлен автоматически) |
 | `APP_PORT`       | порт на хосте, по умолчанию 3000                        |
 
 ## Деплой в Coolify
 
-`docker-compose.prod.yml` — тот же образ, но без Postgres: база уже поднята
+`docker-compose.yml` — тот же образ, но без Postgres: база уже поднята
 в Coolify, её адрес приходит переменной `DATABASE_URL`.
 
-1. New Resource → Docker Compose, репозиторий этот, файл `docker-compose.prod.yml`.
+1. New Resource → Docker Compose, репозиторий этот, файл `docker-compose.yml`.
 2. Задать переменные: `DATABASE_URL`, `OWNER_PASSWORD`, `SESSION_SECRET`.
 3. В домене сервиса `app` указать свой хост — Coolify сам проставит его
    в `SERVICE_FQDN_APP_3000` и настроит роутинг на порт 3000.
@@ -45,7 +48,7 @@ docker compose up -d
 ## Разработка
 
 ```sh
-docker compose up -d db                                    # только база
+docker compose -f docker-compose.local.yml up -d db         # только база
 pnpm install
 pnpm db:push                                               # схема в dev-базу
 DATABASE_URL=$TEST_DATABASE_URL pnpm db:push               # схема в тестовую базу
