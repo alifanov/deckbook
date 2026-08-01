@@ -2,6 +2,7 @@ import { OWNER } from "../../../domain/author";
 import { addComment } from "../../../domain/comments";
 import {
   assignTask,
+  assignUnassigned,
   createTask,
   deleteTask,
   moveTask,
@@ -45,6 +46,10 @@ export const POST = formHandler(async (form) => {
 
     case "assign":
       await assignTask(id, optional(form, "tokenId"), OWNER);
+      return;
+
+    case "assign-unassigned":
+      await assignUnassigned(text(form, "projectId"), text(form, "tokenId"), OWNER);
       return;
 
     case "move":

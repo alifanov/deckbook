@@ -213,6 +213,23 @@ export async function assignTask(id: string, tokenId: string | null, author: Aut
   return updated;
 }
 
+export const countUnassigned = (projectId: string) =>
+  prisma.task.count({ where: { projectId, isTemplate: false, assigneeTokenId: null } });
+
+/**
+ * Раздаёт агенту все ничьи задачи проекта разом. Ничья задача не попадает
+ * ни в один my_tasks, поэтому копится молча; здесь она разбирается пачкой.
+ */
+export async function assignUnassigned(projectId: string, tokenId: string, author: Author) {
+  const orphans = await prisma.task.findMany({
+    where: { projectId, isTemplate: false, assigneeTokenId: null },
+    select: { id: true },
+  });
+  // ponytail: по одной, ради записи в ленту каждой задачи; пачками, если станет тысячи
+  for (const { id } of orphans) await assignTask(id, tokenId, author);
+  return orphans.length;
+}
+
 /** Взять задачу в работу: назначить на себя и перевести в in_progress. */
 export async function claimTask(id: string, tokenId: string) {
   const author = { tokenId };

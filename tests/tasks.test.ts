@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { OWNER, agent } from "../src/domain/author";
 import {
   assignTask,
+  assignUnassigned,
+  countUnassigned,
   createTask,
   deleteTask,
   getTaskTree,
@@ -221,6 +223,26 @@ describe("статусы и назначение", () => {
     ]);
     expect((await listTasks(project.id, { assigneeTokenId: token.id })).map((t) => t.id)).toEqual([
       mine.id,
+    ]);
+  });
+
+  it("раздаёт агенту все ничьи задачи разом, чужие не трогает", async () => {
+    const project = await makeProject();
+    const { token } = await makeToken(project.id);
+    const { token: other } = await makeToken(project.id, "Второй");
+    const orphan = await createTask({ projectId: project.id, title: "Ничья" }, OWNER);
+    const taken = await createTask({ projectId: project.id, title: "Занятая" }, OWNER);
+    await assignTask(taken.id, other.id, OWNER);
+
+    expect(await countUnassigned(project.id)).toBe(1);
+    expect(await assignUnassigned(project.id, token.id, OWNER)).toBe(1);
+    expect(await countUnassigned(project.id)).toBe(0);
+
+    expect((await listTasks(project.id, { assigneeTokenId: token.id })).map((t) => t.id)).toEqual([
+      orphan.id,
+    ]);
+    expect((await listTasks(project.id, { assigneeTokenId: other.id })).map((t) => t.id)).toEqual([
+      taken.id,
     ]);
   });
 

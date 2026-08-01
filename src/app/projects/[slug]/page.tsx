@@ -4,6 +4,7 @@ import { getProjectBySlug } from "../../../domain/projects";
 import {
   asDay,
   asStatus,
+  countUnassigned,
   isOverdue,
   listProjectTree,
   listTasks,
@@ -81,6 +82,8 @@ export default async function ProjectTasksPage({
       })
     : [];
   const tokens = await listTokens(project.id);
+  const agents = tokens.filter((token) => token.revokedAt === null);
+  const orphans = await countUnassigned(project.id);
   const path = `/projects/${slug}`;
 
   return (
@@ -112,6 +115,23 @@ export default async function ProjectTasksPage({
           <button type="submit">Фильтровать</button>
           {filtering && <Link href={path}>сбросить</Link>}
         </form>
+
+        {orphans > 0 && agents.length > 0 && (
+          <form className="row" method="post" action="/api/tasks">
+            <Back path={path} />
+            <input type="hidden" name="intent" value="assign-unassigned" />
+            <input type="hidden" name="projectId" value={project.id} />
+            <span className="muted">Ничьих задач: {orphans} — их не видит ни один агент.</span>
+            <select name="tokenId">
+              {agents.map((token) => (
+                <option key={token.id} value={token.id}>
+                  {token.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit">Назначить все</button>
+          </form>
+        )}
 
         <h2>{filtering ? "Отобранные задачи" : "Дерево задач"}</h2>
 
