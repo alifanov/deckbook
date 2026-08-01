@@ -69,6 +69,25 @@ describe("агент работает через MCP", () => {
     );
   });
 
+  it("передаёт задачу другому агенту и снимает назначение", async () => {
+    const other = await makeToken(projectId, "Дневной агент");
+    const task = await createTask(
+      { projectId, title: "Чинить скан", assigneeTokenId: tokenId },
+      OWNER,
+    );
+
+    const moved = await tool("assign_task", { taskId: task.id, assignee: "Дневной агент" });
+    expect(moved.assignee).toBe("Дневной агент");
+    expect(await tool("my_tasks")).toEqual([]);
+
+    const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+    expect(after.assigneeTokenId).toBe(other.token.id);
+
+    await tool("assign_task", { taskId: task.id });
+    const cleared = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+    expect(cleared.assigneeTokenId).toBeNull();
+  });
+
   it("видит только назначенные на него задачи и берёт задачу в работу", async () => {
     const mine = await createTask({ projectId, title: "Моя" }, OWNER);
     await createTask({ projectId, title: "Не моя" }, OWNER);

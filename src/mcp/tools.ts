@@ -12,6 +12,7 @@ import {
 import { fail } from "../domain/errors";
 import {
   asDay,
+  assignTask,
   claimTask,
   createTask,
   getTaskTree,
@@ -248,6 +249,27 @@ export const TOOLS: Tool[] = [
       await requireOwnTask(args.taskId, ctx);
       const task = await claimTask(args.taskId, ctx.tokenId);
       return { id: task.id, status: task.status };
+    },
+  },
+  {
+    name: "assign_task",
+    description:
+      "Передаёт задачу другому агенту проекта — тому, чьё дело её делать. " +
+      "Имена агентов отдаёт project_info; вызов без assignee оставляет задачу ничьей, " +
+      "а ничью задачу не увидит никто. Себе задачу берут через claim_task.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        taskId: str("идентификатор задачи"),
+        assignee: str("имя агента из project_info; пропусти, чтобы снять назначение"),
+      },
+      required: ["taskId"],
+    },
+    run: async (args, ctx) => {
+      await requireOwnTask(args.taskId, ctx);
+      const assignee = args.assignee ? await resolveAgent(ctx.projectId, args.assignee) : null;
+      const task = await assignTask(args.taskId, assignee?.id ?? null, ctx.author);
+      return { id: task.id, title: task.title, assignee: assignee?.name ?? null };
     },
   },
   {
