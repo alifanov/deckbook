@@ -11,13 +11,17 @@ import {
 } from "../domain/documents";
 import { fail } from "../domain/errors";
 import {
+  asDay,
   claimTask,
   createTask,
   getTaskTree,
+  isOverdue,
   listTasks,
   moveTask,
+  parseDueDate,
   parseStatus,
   requireTaskInProject,
+  setDueDate,
   setStatus,
   type TaskNode,
 } from "../domain/tasks";
@@ -46,6 +50,11 @@ export type Tool = {
 };
 
 const str = (description: string) => ({ type: "string", description });
+const bool = (description: string) => ({ type: "boolean", description });
+
+/** Срок отдаётся днём и сразу с приговором — агенту не нужно считать даты. */
+const due = (task: { dueAt: Date | null }) =>
+  task.dueAt ? { dueAt: asDay(task.dueAt), overdue: isOverdue(task) } : {};
 
 // границу проекта проверяет домен: правило одно на обе поверхности
 const requireOwnTask = (id: string, ctx: McpContext) => requireTaskInProject(id, ctx.projectId);
@@ -58,6 +67,7 @@ const renderTask = (task: TaskNode | Awaited<ReturnType<typeof getTaskTree>>): u
   description: task.description,
   status: task.status,
   assigneeTokenId: task.assigneeTokenId,
+  ...due(task),
   subtasks: task.children.map(renderTask),
 });
 
@@ -79,17 +89,24 @@ export const TOOLS: Tool[] = [
   {
     name: "my_tasks",
     description:
-      "Задачи проекта, назначенные на тебя. Начинай работу с этого списка. Шаблоны сюда не попадают.",
+      "Задачи проекта, назначенные на тебя. Начинай работу с этого списка. Шаблоны сюда не попадают. " +
+      "Задачи со сроком в будущем в список не входят — их время ещё не пришло, браться за них рано. " +
+      "Сначала идут просроченные, потом сегодняшние, потом бессрочные. " +
+      "includeFuture покажет и будущие — бери его, только если тебя спросили про планы, а не про работу.",
     inputSchema: {
       type: "object",
-      properties: { status: str("необязательный фильтр: todo, in_progress, done, cancelled") },
+      properties: {
+        status: str("необязательный фильтр: todo, in_progress, done, cancelled"),
+        includeFuture: bool("показать задачи, чей срок ещё не наступил; по умолчанию false"),
+      },
     },
     run: async (args, ctx) => {
       const tasks = await listTasks(ctx.projectId, {
         assigneeTokenId: ctx.tokenId,
         ...(args.status ? { status: parseStatus(args.status) } : {}),
+        includeFuture: args.includeFuture === true,
       });
-      return tasks.map((t) => ({ id: t.id, title: t.title, status: t.status }));
+      return tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, ...due(t) }));
     },
   },
   {
@@ -110,13 +127,15 @@ export const TOOLS: Tool[] = [
     name: "create_task",
     description:
       "Создаёт задачу в проекте. Без parentTaskId задача становится корневой; с ним — подзадачей. " +
-      "Родитель обязан быть задачей этого же проекта.",
+      "Родитель обязан быть задачей этого же проекта. " +
+      "dueAt откладывает задачу: до этого дня она не появится ни в чьём списке работы.",
     inputSchema: {
       type: "object",
       properties: {
         title: str("заголовок задачи"),
         description: str("описание, необязательно"),
         parentTaskId: str("родительская задача, необязательно"),
+        dueAt: str("срок в виде ГГГГ-ММ-ДД, необязательно"),
       },
       required: ["title"],
     },
@@ -128,10 +147,36 @@ export const TOOLS: Tool[] = [
           parentId: args.parentTaskId ?? null,
           title: args.title,
           description: args.description,
+          dueAt: args.dueAt ? parseDueDate(args.dueAt) : null,
         },
         ctx.author,
       );
-      return { id: task.id, title: task.title, status: task.status };
+      return { id: task.id, title: task.title, status: task.status, ...due(task) };
+    },
+  },
+  {
+    name: "set_task_due",
+    description:
+      "Ставит задаче срок — день, в который её надо сделать, в виде ГГГГ-ММ-ДД. " +
+      "До этого дня задача пропадает из списков работы, после — числится просроченной. " +
+      "Ставь срок, когда работу нельзя начинать раньше определённой даты. " +
+      "Вызов без dueAt снимает срок.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        taskId: str("идентификатор задачи"),
+        dueAt: str("срок в виде ГГГГ-ММ-ДД; пропусти, чтобы снять срок"),
+      },
+      required: ["taskId"],
+    },
+    run: async (args, ctx) => {
+      await requireOwnTask(args.taskId, ctx);
+      const task = await setDueDate(
+        args.taskId,
+        args.dueAt ? parseDueDate(args.dueAt) : null,
+        ctx.author,
+      );
+      return { id: task.id, ...due(task) };
     },
   },
   {
@@ -158,7 +203,8 @@ export const TOOLS: Tool[] = [
     name: "set_task_status",
     description:
       "Ставит задаче статус: todo, in_progress, done или cancelled. Других статусов не существует. " +
-      "cancelled означает «решили не делать». Закрытие повторяющейся задачи возвращает её в todo со сдвинутой датой.",
+      "cancelled означает «решили не делать». Закрытие повторяющейся задачи возвращает её в todo со сроком, " +
+      "сдвинутым на интервал повторения, — до нового срока она снова исчезнет из списков.",
     inputSchema: {
       type: "object",
       properties: { taskId: str("идентификатор задачи"), status: str("новый статус") },
@@ -167,7 +213,7 @@ export const TOOLS: Tool[] = [
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
       const task = await setStatus(args.taskId, parseStatus(args.status), ctx.author);
-      return { id: task.id, status: task.status, dueAt: task.dueAt };
+      return { id: task.id, status: task.status, ...due(task) };
     },
   },
   {

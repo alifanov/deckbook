@@ -19,6 +19,27 @@ export function parseStatus(value: string): TaskStatus {
   return status;
 }
 
+/** Срок — день, не момент: и хранение, и сравнение идут по полночи UTC. */
+export const asDay = (date: Date): string => date.toISOString().slice(0, 10);
+
+const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+/** Сегодня как день — граница, по которой срок считается наступившим. */
+export const today = () => day(asDay(new Date()));
+
+export function parseDueDate(value: string): Date {
+  const raw = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) fail("Срок — дата вида ГГГГ-ММ-ДД, без времени");
+  const date = day(raw);
+  // 31 февраля разбирается молча и уезжает на 3 марта — ловим обратным ходом
+  if (Number.isNaN(date.getTime()) || asDay(date) !== raw) fail(`Даты ${raw} не существует`);
+  return date;
+}
+
+/** Срок наступил и прошёл — задача опаздывает. */
+export const isOverdue = (task: { dueAt: Date | null }) =>
+  task.dueAt !== null && task.dueAt < today();
+
 async function requireTask(id: string) {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) fail("Задачи не существует");
@@ -53,6 +74,7 @@ export async function createTask(
     title: string;
     description?: string;
     isTemplate?: boolean;
+    dueAt?: Date | null;
   },
   author: Author,
 ) {
@@ -75,9 +97,20 @@ export async function createTask(
       title,
       description: input.description?.trim() ?? "",
       isTemplate,
+      dueAt: input.dueAt ?? null,
       createdByTokenId: author.tokenId,
     },
   });
+}
+
+/** Срок задачи. null снимает его — задача снова без даты. */
+export async function setDueDate(id: string, dueAt: Date | null, author: Author) {
+  const before = await requireTask(id);
+  if ((before.dueAt?.getTime() ?? null) === (dueAt?.getTime() ?? null)) return before;
+
+  const updated = await prisma.task.update({ where: { id }, data: { dueAt } });
+  await recordSystem(id, dueAt ? `Срок: ${asDay(dueAt)}` : "Срок снят", author);
+  return updated;
 }
 
 export async function updateTask(
@@ -139,7 +172,7 @@ export async function setStatus(id: string, status: TaskStatus, author: Author) 
   if (task.status === status) return task;
 
   if (status === "done" && task.recurrence !== null) {
-    const from = task.dueAt ?? new Date();
+    const from = task.dueAt ?? today();
     const next = new Date(from.getTime() + task.recurrence * 24 * 60 * 60 * 1000);
     const repeated = await prisma.task.update({
       where: { id },
@@ -147,7 +180,7 @@ export async function setStatus(id: string, status: TaskStatus, author: Author) 
     });
     await recordSystem(
       id,
-      `Повторяющаяся задача закрыта и открыта заново на ${next.toISOString().slice(0, 10)}`,
+      `Повторяющаяся задача закрыта и открыта заново на ${asDay(next)}`,
       author,
     );
     return repeated;
@@ -189,9 +222,12 @@ export async function setRecurrence(id: string, days: number | null, author: Aut
   if (days !== null && (!Number.isInteger(days) || days < 1)) {
     fail("Интервал повторения — целое число дней, не меньше одного");
   }
+  // срок — самостоятельное поле: повтор его не затирает и не уносит с собой,
+  // а лишь берёт точку отсчёта, когда её ещё нет
+  const before = await requireTask(id);
   const updated = await prisma.task.update({
     where: { id },
-    data: { recurrence: days, dueAt: days === null ? null : new Date() },
+    data: { recurrence: days, ...(days !== null && !before.dueAt ? { dueAt: today() } : {}) },
   });
   await recordSystem(
     id,
@@ -215,14 +251,30 @@ export async function listProjectTree(projectId: string): Promise<TaskNode[]> {
   return buildTree(tasks, null);
 }
 
+/**
+ * Плоский список задач — ответ на вопрос «что делать сейчас», и потому
+ * единственное чтение, которое прячет ненаступившие сроки (ADR-0004).
+ * Просроченное идёт первым, бессрочное — последним.
+ */
 export function listTasks(
   projectId: string,
-  filter: { status?: TaskStatus; assigneeTokenId?: string } = {},
+  filter: {
+    status?: TaskStatus;
+    assigneeTokenId?: string;
+    /** показать и то, чей срок ещё не наступил */
+    includeFuture?: boolean;
+  } = {},
 ) {
+  const { includeFuture, ...match } = filter;
   return prisma.task.findMany({
-    where: { projectId, isTemplate: false, ...filter },
+    where: {
+      projectId,
+      isTemplate: false,
+      ...match,
+      ...(includeFuture ? {} : { OR: [{ dueAt: null }, { dueAt: { lte: today() } }] }),
+    },
     include: { assignee: true, createdBy: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
   });
 }
 

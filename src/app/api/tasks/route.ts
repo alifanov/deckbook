@@ -5,7 +5,9 @@ import {
   createTask,
   deleteTask,
   moveTask,
+  parseDueDate,
   parseStatus,
+  setDueDate,
   setRecurrence,
   setStatus,
   updateTask,
@@ -52,6 +54,12 @@ export const POST = formHandler(async (form) => {
     case "recurrence": {
       const days = optional(form, "days");
       await setRecurrence(id, days === null ? null : Number(days), OWNER);
+      return;
+    }
+
+    case "due": {
+      const dueAt = optional(form, "dueAt");
+      await setDueDate(id, dueAt === null ? null : parseDueDate(dueAt), OWNER);
       return;
     }
 

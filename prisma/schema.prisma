@@ -62,8 +62,10 @@ model Task {
   isTemplate  Boolean    @default(false)
   /// интервал повторения в днях; null у обычной задачи
   recurrence  Int?
-  /// дата, которая сдвигается при закрытии рекуррентной задачи
-  dueAt        DateTime?
+  /// срок: день, в который задачу надо сделать. До срока задача не попадает
+  /// в списки агента, после — считается просроченной (ADR-0004).
+  /// У повторяющейся задачи тот же срок сдвигается при закрытии.
+  dueAt        DateTime? @db.Date
   lastClosedAt DateTime?
 
   assigneeTokenId  String?

@@ -4,8 +4,10 @@ import { ConfirmButton } from "../../../../../confirm";
 import { listComments } from "../../../../../domain/comments";
 import { getProjectBySlug } from "../../../../../domain/projects";
 import {
+  asDay,
   getTask,
   getTaskTree,
+  isOverdue,
   listTasks,
   STATUSES,
   type TaskNode,
@@ -47,7 +49,8 @@ export default async function TaskPage({
     getTaskTree(id),
     listComments(id),
     listTokens(project.id),
-    listTasks(project.id),
+    // владелец видит всё: срок прячет задачи только от агента (ADR-0004)
+    listTasks(project.id, { includeFuture: true }),
   ]);
   const path = `/projects/${slug}/tasks/${id}`;
 
@@ -67,7 +70,8 @@ export default async function TaskPage({
           Создал: {task.createdBy ? `агент ${task.createdBy.name}` : "владелец"} ·{" "}
           {when(task.createdAt)}
           {task.recurrence !== null && ` · последнее закрытие: ${when(task.lastClosedAt)}`}
-          {task.dueAt && ` · следующая дата: ${when(task.dueAt)}`}
+          {task.dueAt && ` · срок: ${asDay(task.dueAt)}`}
+          {isOverdue(task) && <strong className="status cancelled"> просрочено</strong>}
         </p>
 
         <div className="card">
@@ -131,6 +135,15 @@ export default async function TaskPage({
             />
             <button type="submit">Повторять</button>
             <span className="muted">пусто — снять повторение</span>
+          </form>
+
+          <form className="row" method="post" action="/api/tasks">
+            <Back path={path} />
+            <input type="hidden" name="intent" value="due" />
+            <input type="hidden" name="id" value={id} />
+            <input type="date" name="dueAt" defaultValue={task.dueAt ? asDay(task.dueAt) : ""} />
+            <button type="submit">Поставить срок</button>
+            <span className="muted">до срока задача не видна агенту; пусто — снять</span>
           </form>
         </div>
 

@@ -81,6 +81,39 @@ describe("агент работает через MCP", () => {
     expect(closed.status).toBe("todo");
   });
 
+  it("не показывает в списке задачу с ненаступившим сроком", async () => {
+    const soon = await tool("create_task", { title: "Ревью РК", dueAt: "2030-09-01" });
+    const now = await tool("create_task", { title: "Текучка" });
+    await tool("claim_task", { taskId: soon.id });
+    await tool("claim_task", { taskId: now.id });
+
+    const working = await tool("my_tasks");
+    expect(working.map((t: { title: string }) => t.title)).toEqual(["Текучка"]);
+
+    const planning = await tool("my_tasks", { includeFuture: true });
+    expect(planning.map((t: { title: string }) => t.title)).toContain("Ревью РК");
+    expect(planning.find((t: { title: string }) => t.title === "Ревью РК")).toMatchObject({
+      dueAt: "2030-09-01",
+      overdue: false,
+    });
+  });
+
+  it("ставит и снимает срок задачи", async () => {
+    const task = await tool("create_task", { title: "Ревью РК" });
+    await tool("claim_task", { taskId: task.id });
+
+    expect(await tool("set_task_due", { taskId: task.id, dueAt: "2030-09-01" })).toMatchObject({
+      dueAt: "2030-09-01",
+    });
+    expect(await tool("my_tasks")).toEqual([]);
+    expect((await tool("my_tasks", { includeFuture: true })).length).toBe(1);
+
+    expect(await tool("set_task_due", { taskId: task.id })).toEqual({ id: task.id });
+    await expect(tool("set_task_due", { taskId: task.id, dueAt: "1 сентября" })).rejects.toThrow(
+      /ГГГГ-ММ-ДД/,
+    );
+  });
+
   it("перемещает задачу и не может замкнуть дерево", async () => {
     const root = await tool("create_task", { title: "Корень" });
     const child = await tool("create_task", { title: "Ребёнок", parentTaskId: root.id });

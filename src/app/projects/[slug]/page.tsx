@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectBySlug } from "../../../domain/projects";
 import {
+  asDay,
   asStatus,
+  isOverdue,
   listProjectTree,
   listTasks,
   STATUSES,
@@ -13,6 +15,16 @@ import { Back, Banner, Header, ProjectNav } from "../../../ui";
 
 export const dynamic = "force-dynamic";
 
+/** Срок и приговор по нему — одинаково в дереве и в отобранном списке. */
+const Due = ({ task }: { task: { dueAt: Date | null } }) =>
+  task.dueAt ? (
+    <span className={isOverdue(task) ? "status cancelled" : "muted"}>
+      {" "}
+      · срок {asDay(task.dueAt)}
+      {isOverdue(task) && " — просрочено"}
+    </span>
+  ) : null;
+
 function Branch({ node, slug }: { node: TaskNode; slug: string }) {
   const link = (
     <>
@@ -20,6 +32,7 @@ function Branch({ node, slug }: { node: TaskNode; slug: string }) {
       <span className={`status ${node.status}`}>{node.status}</span>
       {node.assigneeTokenId && <span className="muted"> · назначена</span>}
       {node.recurrence && <span className="muted"> · повтор {node.recurrence} дн.</span>}
+      {node.dueAt && <Due task={node} />}
     </>
   );
 
@@ -63,6 +76,8 @@ export default async function ProjectTasksPage({
     ? await listTasks(project.id, {
         ...(wanted ? { status: wanted } : {}),
         ...(assignee ? { assigneeTokenId: assignee } : {}),
+        // владелец видит всё: срок прячет задачи только от агента (ADR-0004)
+        includeFuture: true,
       })
     : [];
   const tokens = await listTokens(project.id);
@@ -110,6 +125,7 @@ export default async function ProjectTasksPage({
                   <Link href={`/projects/${slug}/tasks/${task.id}`}>{task.title}</Link>{" "}
                   <span className={`status ${task.status}`}>{task.status}</span>
                   {task.assignee && <span className="muted"> · {task.assignee.name}</span>}
+                  <Due task={task} />
                 </li>
               ))}
             </ul>
