@@ -1,9 +1,22 @@
 # Прод-деплой в Coolify. Postgres здесь нет — он уже поднят рядом,
 # его адрес приходит переменной DATABASE_URL.
 services:
+  # Одноразовый контейнер: накатывает миграции и завершается. Приложение
+  # стартует только после его успеха, так что запросы никогда не приходят
+  # в базу со старой схемой. Единственное место, где схема меняется.
+  migrate:
+    build: .
+    restart: "no"
+    entrypoint: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+
   app:
     build: .
     restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     environment:
       # ponytail: домен и роутинг проставляет сам Coolify по этой переменной
       SERVICE_FQDN_APP_3000:

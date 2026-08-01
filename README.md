@@ -13,8 +13,10 @@ cp .env.example .env      # задать OWNER_PASSWORD и SESSION_SECRET
 docker compose -f docker-compose.local.yml up -d
 ```
 
-Поднимаются два контейнера — приложение и Postgres, больше ничего не требуется.
-Схема накатывается на старте (`prisma db push`), бэкап — обычный дамп Postgres.
+Поднимаются Postgres, одноразовый контейнер `migrate` и приложение. Схему
+меняет только `migrate` (`prisma migrate deploy`); приложение стартует после
+того, как он отработал, — в базу со старой схемой запросы не приходят.
+Бэкап — обычный дамп Postgres.
 
 Переменные окружения:
 
@@ -35,6 +37,19 @@ docker compose -f docker-compose.local.yml up -d
 3. В домене сервиса `app` указать свой хост — Coolify сам проставит его
    в `SERVICE_FQDN_APP_3000` и настроит роутинг на порт 3000.
 
+Каждый деплой сначала поднимает сервис `migrate` и ждёт его успешного
+завершения. Если миграция упала — приложение не стартует и остаётся работать
+предыдущий контейнер.
+
+**Разово для базы, которая жила на `db push`** (в ней нет таблицы
+`_prisma_migrations`, и деплой упадёт с `P3005`). Разметить её как уже
+содержащую первую миграцию — данные при этом не трогаются:
+
+```sh
+DATABASE_URL=<адрес прод-базы> pnpm exec prisma migrate resolve \
+  --applied 20260801000000_init
+```
+
 ## Подключение агента
 
 1. Завести проект в UI.
@@ -50,9 +65,19 @@ docker compose -f docker-compose.local.yml up -d
 ```sh
 docker compose -f docker-compose.local.yml up -d db         # только база
 pnpm install
-pnpm db:push                                               # схема в dev-базу
-DATABASE_URL=$TEST_DATABASE_URL pnpm db:push               # схема в тестовую базу
+pnpm db:migrate                                            # миграции в dev-базу
+DATABASE_URL=$TEST_DATABASE_URL pnpm db:migrate            # миграции в тестовую базу
 pnpm dev
+```
+
+Новая миграция после правки `prisma/schema.prisma` — диффом против текущей
+базы. Без `migrate dev` и без shadow-базы: обе умеют ронять данные.
+
+```sh
+DIR=prisma/migrations/$(date +%Y%m%d%H%M%S)_короткое_имя && mkdir -p "$DIR"
+pnpm exec prisma migrate diff --from-config-datasource \
+  --to-schema prisma/schema.prisma --script > "$DIR/migration.sql"
+pnpm db:migrate
 ```
 
 Тесты идут против настоящего Postgres (`TEST_DATABASE_URL`), каждый тест

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Task" ALTER COLUMN "dueAt" SET DATA TYPE DATE;
+

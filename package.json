@@ -9,7 +9,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate"
   },
   "packageManager": "pnpm@10.9.0",
