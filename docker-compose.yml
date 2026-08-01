@@ -7,7 +7,14 @@ services:
   migrate:
     build: .
     restart: "no"
-    entrypoint: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+    # ВРЕМЕННО, снять следующим коммитом: прод-база создана прежним db push
+    # и не знает о миграциях. Размечаем её первой миграцией — она описывает
+    # ровно ту схему, что в базе уже лежит (ADR-0005). `|| true` — потому что
+    # на второй раз разметка уже есть и команда законно падает.
+    entrypoint:
+      - sh
+      - -c
+      - "./node_modules/.bin/prisma migrate resolve --applied 20260801000000_init || true; ./node_modules/.bin/prisma migrate deploy"
     environment:
       DATABASE_URL: ${DATABASE_URL}
 
