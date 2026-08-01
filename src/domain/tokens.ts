@@ -37,6 +37,27 @@ export function listTokens(projectId: string) {
   });
 }
 
+/** Действующие агенты проекта — те, на кого можно назначить задачу. */
+export function listAgents(projectId: string) {
+  return prisma.token.findMany({
+    where: { projectId, revokedAt: null },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/** Агент проекта по имени. Ошибка перечисляет допустимые имена. */
+export async function resolveAgent(projectId: string, name: string) {
+  const agents = await listAgents(projectId);
+  const wanted = name.trim().toLowerCase();
+  const agent = agents.find((a) => a.name.toLowerCase() === wanted);
+  if (!agent) {
+    fail(
+      `Агента «${name}» в проекте нет; есть: ${agents.map((a) => a.name).join(", ") || "никого"}`,
+    );
+  }
+  return agent;
+}
+
 export function revokeToken(id: string) {
   return prisma.token.update({
     where: { id },

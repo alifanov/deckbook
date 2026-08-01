@@ -40,7 +40,7 @@ describe("изоляция токена на HTTP-шве", () => {
     const { value } = await makeToken(project.id);
 
     const result = await callTool(project.slug, value, "project_info");
-    expect(result.data).toEqual({ project: "Дом", slug: project.slug });
+    expect(result.data).toMatchObject({ project: "Дом", slug: project.slug });
   });
 
   it("токен проекта A к адресу проекта B получает отказ", async () => {

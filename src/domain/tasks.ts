@@ -75,6 +75,7 @@ export async function createTask(
     description?: string;
     isTemplate?: boolean;
     dueAt?: Date | null;
+    assigneeTokenId?: string | null;
   },
   author: Author,
 ) {
@@ -98,6 +99,7 @@ export async function createTask(
       description: input.description?.trim() ?? "",
       isTemplate,
       dueAt: input.dueAt ?? null,
+      assigneeTokenId: input.assigneeTokenId ?? null,
       createdByTokenId: author.tokenId,
     },
   });

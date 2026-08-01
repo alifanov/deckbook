@@ -53,6 +53,22 @@ describe("агент работает через MCP", () => {
     expect(created.createdByTokenId).toBe(tokenId);
   });
 
+  it("создаёт задачу сразу на исполнителя, и тот видит её в my_tasks", async () => {
+    const created = await tool("create_task", {
+      title: "Починить скан",
+      assignee: "ночной агент",
+    });
+    expect(created.assignee).toBe("Ночной агент");
+    expect((await tool("my_tasks")).map((t: { id: string }) => t.id)).toEqual([created.id]);
+
+    const info = await tool("project_info");
+    expect(info.agents).toEqual(["Ночной агент"]);
+
+    await expect(tool("create_task", { title: "Ничья", assignee: "Кто-то" })).rejects.toThrow(
+      /Ночной агент/,
+    );
+  });
+
   it("видит только назначенные на него задачи и берёт задачу в работу", async () => {
     const mine = await createTask({ projectId, title: "Моя" }, OWNER);
     await createTask({ projectId, title: "Не моя" }, OWNER);

@@ -26,6 +26,7 @@ import {
   type TaskNode,
 } from "../domain/tasks";
 import { applyTemplate, listTemplates } from "../domain/templates";
+import { listAgents, resolveAgent } from "../domain/tokens";
 
 /** Проект и агент берутся из адреса и токена — инструменту их не передают. */
 export type McpContext = {
@@ -33,6 +34,7 @@ export type McpContext = {
   projectName: string;
   projectSlug: string;
   tokenId: string;
+  tokenName: string;
   author: Author;
 };
 
@@ -82,9 +84,15 @@ export const TOOLS: Tool[] = [
   {
     name: "project_info",
     description:
-      "Возвращает проект, внутри которого ты работаешь. Других проектов для тебя не существует.",
+      "Возвращает проект, внутри которого ты работаешь, и его агентов — тех, на кого можно " +
+      "назначать задачи. Других проектов для тебя не существует.",
     inputSchema: { type: "object", properties: {} },
-    run: async (_args, ctx) => ({ project: ctx.projectName, slug: ctx.projectSlug }),
+    run: async (_args, ctx) => ({
+      project: ctx.projectName,
+      slug: ctx.projectSlug,
+      me: ctx.tokenName,
+      agents: (await listAgents(ctx.projectId)).map((a) => a.name),
+    }),
   },
   {
     name: "my_tasks",
@@ -128,7 +136,9 @@ export const TOOLS: Tool[] = [
     description:
       "Создаёт задачу в проекте. Без parentTaskId задача становится корневой; с ним — подзадачей. " +
       "Родитель обязан быть задачей этого же проекта. " +
-      "dueAt откладывает задачу: до этого дня она не появится ни в чьём списке работы.",
+      "dueAt откладывает задачу: до этого дня она не появится ни в чьём списке работы. " +
+      "assignee сразу отдаёт задачу агенту — без него задача ничья и не попадёт ни в один my_tasks. " +
+      "Имена агентов проекта отдаёт project_info.",
     inputSchema: {
       type: "object",
       properties: {
@@ -136,11 +146,13 @@ export const TOOLS: Tool[] = [
         description: str("описание, необязательно"),
         parentTaskId: str("родительская задача, необязательно"),
         dueAt: str("срок в виде ГГГГ-ММ-ДД, необязательно"),
+        assignee: str("имя агента-исполнителя из project_info; по умолчанию задача ничья"),
       },
       required: ["title"],
     },
     run: async (args, ctx) => {
       if (args.parentTaskId) await requireOwnTask(args.parentTaskId, ctx);
+      const assignee = args.assignee ? await resolveAgent(ctx.projectId, args.assignee) : null;
       const task = await createTask(
         {
           projectId: ctx.projectId,
@@ -148,10 +160,17 @@ export const TOOLS: Tool[] = [
           title: args.title,
           description: args.description,
           dueAt: args.dueAt ? parseDueDate(args.dueAt) : null,
+          assigneeTokenId: assignee?.id ?? null,
         },
         ctx.author,
       );
-      return { id: task.id, title: task.title, status: task.status, ...due(task) };
+      return {
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        assignee: assignee?.name ?? null,
+        ...due(task),
+      };
     },
   },
   {

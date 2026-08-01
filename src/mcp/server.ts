@@ -40,6 +40,7 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
     projectName: auth.project.name,
     projectSlug: auth.project.slug,
     tokenId: auth.token.id,
+    tokenName: auth.token.name,
     author: agent(auth.token.id),
   };
 
