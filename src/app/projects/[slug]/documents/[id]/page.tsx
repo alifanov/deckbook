@@ -1,4 +1,3 @@
-import MarkdownIt from "markdown-it";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmButton } from "../../../../../confirm";
@@ -9,15 +8,13 @@ import {
   Banner,
   Header,
   Icon,
+  Markdown,
   moment,
   ProjectNav,
   Reveal,
 } from "../../../../../ui";
 
 export const dynamic = "force-dynamic";
-
-// html: false — разметка агента остаётся текстом, а не исполняемым HTML
-const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
 function folders(nodes: DocumentNode[], depth = 0): { id: string; label: string }[] {
   return nodes
@@ -130,10 +127,9 @@ export default async function DocumentPage({
             ) : document.content.trim() === "" ? (
               <p className="muted">Документ пуст.</p>
             ) : (
-              <div
-                className="markdown"
-                dangerouslySetInnerHTML={{ __html: markdown.render(document.content) }}
-              />
+              <div className="card" style={{ padding: "28px 32px" }}>
+                <Markdown text={document.content} />
+              </div>
             )}
           </>
         )}

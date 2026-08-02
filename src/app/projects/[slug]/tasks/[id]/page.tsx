@@ -23,6 +23,7 @@ import {
   Head,
   Header,
   Icon,
+  Markdown,
   moment,
   Prio,
   priorityLabel,
@@ -238,11 +239,7 @@ export default async function TaskPage({
 
         <div className="card" style={{ marginBottom: 36 }}>
           {task.description ? (
-            <div className="prose">
-              {task.description.split(/\n{2,}/).map((chunk, n) => (
-                <p key={n}>{chunk}</p>
-              ))}
-            </div>
+            <Markdown text={task.description} />
           ) : (
             <p className="muted" style={{ margin: 0 }}>
               Описания нет.
@@ -319,7 +316,7 @@ export default async function TaskPage({
                     <div className="who">
                       {entry.author?.name ?? "владелец"} · {moment(entry.createdAt)}
                     </div>
-                    <p>{entry.body}</p>
+                    <Markdown text={entry.body} />
                   </div>
                 ),
               )}

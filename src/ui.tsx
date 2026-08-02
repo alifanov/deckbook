@@ -1,6 +1,15 @@
+import MarkdownIt from "markdown-it";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { TaskPriority, TaskStatus } from "./generated/prisma/client";
+
+// html: false — разметка агента остаётся текстом, а не исполняемым HTML
+const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
+
+/** Текст агента как markdown: описания задач, комментарии, документы. */
+export const Markdown = ({ text }: { text: string }) => (
+  <div className="markdown" dangerouslySetInnerHTML={{ __html: markdown.render(text) }} />
+);
 
 export function Logo({ size = 18 }: { size?: number }) {
   return (

@@ -124,19 +124,6 @@ h3 {
   font-size: 13px;
   color: var(--muted);
 }
-.prose {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  font-size: 17px;
-  line-height: 1.75;
-  max-width: 62ch;
-  color: var(--ink);
-}
-.prose p {
-  margin: 0;
-}
-
 /* ── раскладка ─────────────────────────────────────────────────────── */
 
 .bar {
@@ -520,12 +507,13 @@ details.reveal.drop > .pop textarea {
   font-size: 14px;
   margin-bottom: 6px;
 }
-.feed p {
-  margin: 0;
+/* комментарии в ленте — тот же markdown, только компактнее */
+.feed .markdown p,
+.feed .markdown ul,
+.feed .markdown ol {
   font-size: 16px;
   line-height: 1.7;
   max-width: 54ch;
-  white-space: pre-wrap;
 }
 
 /* ── команды и markdown ────────────────────────────────────────────── */
@@ -558,13 +546,12 @@ details.reveal.drop > .pop textarea {
   word-break: break-all;
 }
 
-.markdown {
-  background: var(--panel);
-  border-radius: 12px;
-  padding: 28px 32px;
-}
+/* только типографика: панель даёт .card на месте вызова */
 .markdown > :first-child {
   margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
 }
 .markdown h1,
 .markdown h2 {
