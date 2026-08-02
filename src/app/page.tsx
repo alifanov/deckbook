@@ -47,6 +47,12 @@ export default async function ProjectsPage({
               <span className="muted">{day(project.createdAt)}</span>
             </div>
 
+            {project.goal && (
+              <p className="muted" style={{ whiteSpace: "pre-wrap", margin: "10px 0 0" }}>
+                {project.goal}
+              </p>
+            )}
+
             <div className="bar" style={{ gap: 20, marginTop: 12 }}>
               <span className="muted">
                 {plural(
