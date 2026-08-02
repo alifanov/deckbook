@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deckbook × Агенты — как это работает</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --border:#2a2f3a;
+    --text:#e6e9ef; --muted:#8b93a3;
+    --routine:#a78bfa; --task:#34d399; --doc:#60a5fa; --code:#fbbf24; --owner:#f472b6;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:0 0 60px}
+  header{padding:28px 24px 18px; max-width:1100px; margin:0 auto}
+  h1{font-size:22px; font-weight:700}
+  header p{color:var(--muted); margin-top:4px; font-size:14px}
+  nav{display:flex; gap:8px; padding:0 24px 20px; max-width:1100px; margin:0 auto; flex-wrap:wrap}
+  nav button{
+    background:var(--panel); color:var(--muted); border:1px solid var(--border);
+    padding:8px 16px; border-radius:20px; font-size:14px; cursor:pointer;
+  }
+  nav button.on{background:var(--panel2); color:var(--text); border-color:#3d4453}
+  main{max-width:1100px; margin:0 auto; padding:0 24px}
+  section{display:none}
+  section.on{display:block}
+  .hint{color:var(--muted); font-size:13px; margin-bottom:16px}
+
+  /* ── общий пайплайн ── */
+  .pipeline{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:22px;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+  .pipeline .n{font-size:12.5px; padding:4px 10px; border-radius:8px; background:var(--panel2); border:1px solid var(--border); white-space:nowrap}
+  .pipeline .a{color:var(--muted); font-size:12px}
+
+  /* ── сценарии ── */
+  .scen-wrap{display:grid; grid-template-columns:280px 1fr; gap:20px}
+  @media (max-width:820px){ .scen-wrap{grid-template-columns:1fr} }
+  .scen-list{display:flex; flex-direction:column; gap:8px}
+  .scen-list button{
+    text-align:left; background:var(--panel); border:1px solid var(--border); color:var(--text);
+    padding:11px 14px; border-radius:10px; cursor:pointer; font-size:14px; line-height:1.35;
+  }
+  .scen-list button small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+  .scen-list button.on{border-color:#4b5468; background:var(--panel2)}
+  .flow-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap}
+  .flow-head h2{font-size:17px}
+  .play{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px}
+  .legend{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--muted)}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  .steps{position:relative; padding-left:22px}
+  .steps::before{content:""; position:absolute; left:7px; top:14px; bottom:14px; width:2px; background:var(--border)}
+  .step{
+    position:relative; background:var(--panel); border:1px solid var(--border); border-left-width:4px;
+    border-radius:10px; padding:11px 14px; margin-bottom:10px; cursor:pointer; transition:opacity .25s, border-color .25s;
+  }
+  .step::before{content:""; position:absolute; left:-21px; top:16px; width:10px; height:10px; border-radius:50%; background:var(--border)}
+  .step .chip{font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; margin-bottom:3px}
+  .step h3{font-size:14.5px; font-weight:600}
+  .step p{color:var(--muted); font-size:13.5px; margin-top:3px}
+  .steps.playing .step{opacity:.28}
+  .steps.playing .step.hl{opacity:1}
+  .step.hl{border-color:#4b5468; border-left-color:inherit}
+
+  /* ── сущности ── */
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:13px 15px}
+  .card h3{font-size:14.5px; margin-bottom:4px}
+  .card p{color:var(--muted); font-size:13px}
+  .card .avoid{margin-top:7px; font-size:11.5px; color:#6b7280}
+  .statuses{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:16px 0 20px; font-size:13px}
+  .statuses span{padding:3px 12px; border-radius:14px; border:1px solid var(--border); background:var(--panel)}
+  .statuses .a{color:var(--muted)}
+
+  /* ── рутины ── */
+  .cadence{margin-bottom:22px}
+  .cadence h2{font-size:15px; margin-bottom:8px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; font-size:12.5px}
+  .routines{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px}
+  .routine{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:11px 14px; display:flex; gap:10px}
+  .routine .t{font-variant-numeric:tabular-nums; color:var(--routine); font-size:12.5px; white-space:nowrap; min-width:74px; padding-top:1px}
+  .routine b{font-size:14px; font-weight:600; display:block}
+  .routine p{color:var(--muted); font-size:12.5px; margin-top:2px}
+
+  /* ── документы ── */
+  .tree{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; font-size:14px}
+  .tree details{margin-left:0}
+  .tree details details, .tree details .leaf{margin-left:22px}
+  .tree summary{cursor:pointer; padding:4px 6px; border-radius:6px; list-style:none}
+  .tree summary::before{content:"▸ "; color:var(--muted)}
+  .tree details[open] > summary::before{content:"▾ "}
+  .tree summary:hover{background:var(--panel2)}
+  .tree .leaf{padding:4px 6px; color:var(--text)}
+  .tree .f{color:var(--doc)}
+  .tree .d{color:var(--muted); font-size:12.5px; margin-left:8px}
+  .note{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 15px; color:var(--muted); font-size:13px; margin-top:14px}
+  .note b{color:var(--text)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Deckbook × Агенты</h1>
+  <p>Как рутины, задачи и документы замыкаются в самоходный цикл. Данные — из реальных расписаний и команд.</p>
+</header>
+
+<nav>
+  <button data-s="scen" class="on">Сценарии</button>
+  <button data-s="ent">Сущности</button>
+  <button data-s="rout">Рутины</button>
+  <button data-s="docs">Документация</button>
+</nav>
+
+<main>
+
+<!-- ══════════ СЦЕНАРИИ ══════════ -->
+<section id="scen" class="on">
+  <div class="pipeline">
+    <span class="n">Сигнал</span><span class="a">→</span>
+    <span class="n">Дневной лог <code>logs/</code></span><span class="a">→</span>
+    <span class="n">Задача в Deckbook</span><span class="a">→</span>
+    <span class="n">fix-task: код → PR → CI → merge</span><span class="a">→</span>
+    <span class="n">done + отчёт</span><span class="a">→</span>
+    <span class="n">ночной sync-state → <code>state/</code></span>
+  </div>
+  <div class="scen-wrap">
+    <div class="scen-list" id="scenList"></div>
+    <div>
+      <div class="flow-head">
+        <h2 id="flowTitle"></h2>
+        <button class="play" id="playBtn">▶ Проиграть</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="steps" id="steps"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ СУЩНОСТИ ══════════ -->
+<section id="ent">
+  <p class="hint">Словарь из CONTEXT.md — агенты обязаны говорить этими терминами и не съезжать на синонимы.</p>
+  <div class="statuses">
+    <span>todo</span><span class="a">→</span><span>in_progress</span><span class="a">→</span><span>done</span>
+    <span class="a" style="margin-left:6px">или</span><span>cancelled</span>
+    <span class="a" style="margin-left:14px">приоритет: high / normal / low · normal нигде не показывается</span>
+  </div>
+  <div class="cards" id="entCards"></div>
+</section>
+
+<!-- ══════════ РУТИНЫ ══════════ -->
+<section id="rout">
+  <p class="hint">Глобальные рутины: логика в <code>~/.claude/commands/deckbook/*.md</code>, крон только вызывает слэш-команду. Все пишут секцию в дневной лог и заводят задачи на проблемы — сами ничего не чинят (кроме fix-task).</p>
+  <div id="routCadences"></div>
+</section>
+
+<!-- ══════════ ДОКУМЕНТАЦИЯ ══════════ -->
+<section id="docs">
+  <p class="hint">Дерево документов проекта в Deckbook (структура SecScanner). Кликай по папкам.</p>
+  <div class="tree">
+    <details open>
+      <summary><b class="f">state/</b><span class="d">«как есть сейчас», без истории — перезаписывается ночным синком</span></summary>
+      <details>
+        <summary><span class="f">spec/</span><span class="d">что система делает</span></summary>
+        <div class="leaf">data-model <span class="d">модель данных</span></div>
+        <div class="leaf">flows/ <span class="d">флоу и экраны</span></div>
+        <div class="leaf">checks <span class="d">проверки сканера</span></div>
+      </details>
+      <details>
+        <summary><span class="f">product/</span><span class="d">рынок и продукт</span></summary>
+        <div class="leaf">metrics <span class="d">события аналитики и определения метрик</span></div>
+        <div class="leaf">pricing <span class="d">цены и тарифы</span></div>
+        <div class="leaf">positioning <span class="d">позиционирование, конкуренты — сюда пишет check-seo</span></div>
+      </details>
+      <details>
+        <summary><span class="f">design/</span><span class="d">эталон для дизайн-аудита</span></summary>
+        <div class="leaf">tokens <span class="d">цвета, типографика, отступы</span></div>
+        <div class="leaf">patterns <span class="d">повторяющиеся паттерны UI</span></div>
+        <div class="leaf">components <span class="d">компоненты</span></div>
+        <div class="leaf">voice-and-tone <span class="d">голос и тон текстов</span></div>
+      </details>
+      <div class="leaf">arch <span class="d">карта архитектуры + решения D-NNNN</span></div>
+      <div class="leaf">hypotheses <span class="d">ставки: evidence, статус, Closed-таблица с вердиктами</span></div>
+      <div class="leaf">experiments <span class="d">E-NNN, green-light метрики, Завершённые</span></div>
+    </details>
+    <details open>
+      <summary><b class="f">logs/</b><span class="d">дневные логи YYYY-MM-DD — общая лента всех рутин за день</span></summary>
+      <div class="leaf">2026-08-02 <span class="d">секции: ## Логи (SigNoz) · ## Аналитика · ## Изменения · ## SEO · ## Security · ## Sync …</span></div>
+    </details>
+    <details>
+      <summary><b class="f">insights/</b><span class="d">выжимки: daily → weekly → monthly</span></summary>
+      <div class="leaf">daily / weekly / monthly <span class="d">ротация раз в месяц</span></div>
+    </details>
+    <div class="leaf"><b class="f">tasks</b> <span class="d">формат задач: ссылка на лог + критерии приёмки</span></div>
+    <div class="leaf"><b class="f">README</b> <span class="d">пороги создания задач: 3+ лога подряд или 2+ независимых источника</span></div>
+    <div class="leaf"><b class="f">_archive/</b> <span class="d">логи старше 4 недель, инсайты после ротации</span></div>
+  </div>
+  <div class="note">
+    <b>Правило потока:</b> рутины пишут только в <code>logs/</code> (сырьё за день). Ночью <code>sync-state</code> разбирает вчерашний лог и обновляет <code>state/</code> — так state остаётся снимком «сейчас», а не свалкой истории. В репозитории кода живут только <code>CONTEXT.md</code> и <code>docs/adr/</code>.
+  </div>
+</section>
+
+</main>
+
+<script>
+/* ── данные ── */
+const ACTORS = {
+  routine:{label:'Рутина',  color:'var(--routine)'},
+  task:   {label:'Задача',  color:'var(--task)'},
+  doc:    {label:'Документ',color:'var(--doc)'},
+  code:   {label:'Код / CI',color:'var(--code)'},
+  owner:  {label:'Владелец',color:'var(--owner)'},
+};
+
+const SCENARIOS = [
+{ id:'bug', icon:'🐛', title:'Ошибка в логах прода', sub:'check-logs → задача → фикс', steps:[
+  {a:'routine', t:'check-logs — ежедневно 08:03', d:'Рутина читает SigNoz: error/warn-логи и 5xx за 24 часа, сравнивает с прошлыми днями, ищет новые типы ошибок.'},
+  {a:'doc', t:'Секция «Логи (SigNoz)» в дневном логе', d:'Результат — секция в документе logs/YYYY-MM-DD в Deckbook. Даже если всё чисто.'},
+  {a:'task', t:'create_task на новую ошибку', d:'На каждую новую ошибку — задача: контекст, ссылка на лог, критерии приёмки. Статус todo.'},
+  {a:'routine', t:'fix-task — каждый час', d:'Часовая рутина берёт первую реализуемую кодом задачу: claim_task → in_progress → комментарий «Взял в работу».'},
+  {a:'code', t:'Код → PR → CI → merge', d:'Минимальный фикс без scope creep, commit, push, PR. CI зелёный — merge; красный — максимум 2 попытки починки, дальше комментарий в задачу и стоп.'},
+  {a:'task', t:'done + отчёт в ленте', d:'Комментарий: изменённые файлы, суть решения, ссылка на PR. Статус done.'},
+  {a:'doc', t:'Строка в «## Изменения»', d:'fix-task дописывает в дневной лог строку: задача, суть, PR. Ночью её подхватит sync-state.'},
+]},
+{ id:'deploy', icon:'🔴', title:'Упал деплой', sub:'check-deploy → critical-задача', steps:[
+  {a:'routine', t:'check-deploy — каждые 6 часов', d:'Смотрит статус последнего деплоя в Coolify. Пассивная: не редеплоит, не рестартует, ничего не чинит сама.'},
+  {a:'task', t:'Critical-задача при красном', d:'Красный деплой → задача с приоритетом high: логи деплоя, диагноз, что проверить.'},
+  {a:'routine', t:'fix-task подхватывает', d:'В ближайший часовой прогон задача уходит в работу первой — просроченные и важные разбираются раньше бессрочных.'},
+  {a:'code', t:'Фикс → PR → CI → merge', d:'Чинится причина падения (сборка, миграция, конфиг), пушится, мержится после зелёного CI — Coolify деплоит заново.'},
+  {a:'doc', t:'След в дневном логе', d:'Инцидент виден в логе дня: секция check-deploy + строка в «Изменения» после фикса.'},
+]},
+{ id:'analytics', icon:'📉', title:'Косяк в аналитике', sub:'pulse-analytics / check-funnel', steps:[
+  {a:'routine', t:'pulse-analytics — ежедневно 08:25', d:'Пульс: ключевые события за 24ч против предыдущих 24ч и среднего недели. Тихий — без отчёта, если всё в норме.'},
+  {a:'task', t:'Задача только на обвал', d:'Обнуление или обвал стабильного события, всплеск ошибок → задача. Дребезг и мелкие колебания игнорируются.'},
+  {a:'routine', t:'check-funnel — понедельник 09:03', d:'Глубокий разбор раз в неделю: воронка, источники, активация, retention, использование фич.'},
+  {a:'doc', t:'Секция «Аналитика» в логе', d:'Отчёт воронки — в дневной лог; аномалии превращаются в задачи.'},
+  {a:'doc', t:'state/hypotheses — вердикт по ставкам', d:'Ночной sync-state сверяет данные со ставками: подтверждено/опровергнуто → evidence и статус, вердикт в Closed-таблицу. Refuted-гипотезы назад не возвращаются.'},
+  {a:'code', t:'Фикс через fix-task', d:'Если косяк в коде (событие сломали релизом) — обычный цикл: задача → PR → CI → merge → done.'},
+]},
+{ id:'seo', icon:'🕵️', title:'SEO и конкуренты', sub:'check-seo → positioning + задачи', steps:[
+  {a:'routine', t:'check-seo — понедельник 10:06', d:'Google Search Console, техчек (robots.txt, canonical, sitemap, метадата), ключевики через DataForSEO, взгляд на выдачу и конкурентов.'},
+  {a:'doc', t:'Секция «SEO» в дневном логе', d:'Позиции, клики, находки, проблемы — всё в лог дня.'},
+  {a:'task', t:'Задачи на проблемы', d:'Битый canonical, просевший кластер, упущенный ключевик → задачи с критериями приёмки.'},
+  {a:'doc', t:'state/product/positioning', d:'Устойчивые факты о конкурентах и позиционировании ночной синк переносит в state — картина рынка «как сейчас».'},
+  {a:'code', t:'Фикс через fix-task', d:'Технические SEO-задачи уходят в обычный цикл: код → PR → CI → merge.'},
+]},
+{ id:'owner', icon:'✍️', title:'Я сам поставил задачу', sub:'create_task → fix-task за час', steps:[
+  {a:'owner', t:'«Создай задачу про…»', d:'Голосом через агента или в UI: create_task в нужном проекте. Можно срок и приоритет. Важно: создать задачу ≠ сделать её — агент только заводит запись.'},
+  {a:'task', t:'Задача в дереве, статус todo', d:'Задача — единственная единица работы: может стать эпиком, если появятся дети. До срока агенту не показывается — её время ещё не пришло.'},
+  {a:'routine', t:'fix-task — в ближайший час', d:'Прогоны на :06 (secscanner), :37 (deckbook), :49 (pageradar). Берёт ровно одну задачу, никого не спрашивая: claim → in_progress → «Взял в работу».'},
+  {a:'code', t:'Код → PR → CI → merge', d:'Минимальная реализация по CLAUDE.md проекта, тесты, PR в основную ветку, merge после зелёного CI.'},
+  {a:'task', t:'done + отчёт', d:'В ленте задачи — что изменено, файлы, ссылка на PR. Утром достаточно открыть Deckbook и прочитать.'},
+  {a:'doc', t:'Строка в «## Изменения»', d:'И след в дневном логе — ночной синк учтёт изменение в state.'},
+]},
+{ id:'sync', icon:'🌙', title:'Ночной синк состояния', sub:'лог дня → state/ → задачи', steps:[
+  {a:'doc', t:'За день лог наполнился', d:'Каждая рутина и каждый фикс оставили секции в logs/YYYY-MM-DD: логи, аналитика, SEO, security, изменения.'},
+  {a:'routine', t:'sync-state — ночью', d:'Читает вчерашний лог целиком и раскладывает: что изменило состояние системы, а что осталось наблюдением.'},
+  {a:'doc', t:'Обновление state/*', d:'Архитектурные решения → state/arch (D-NNNN); флоу и модель → state/spec; события → state/product/metrics; ставки → hypotheses; эксперименты → experiments (E-NNN). Кода не трогает.'},
+  {a:'task', t:'Недостающие задачи', d:'Рекомендации, прошедшие порог из README (3+ лога подряд или 2+ источника) и ещё не заведённые → create_task. Refuted не возвращает, declined не пересоздаёт.'},
+  {a:'doc', t:'Секция «## Sync» в лог', d:'Отметка: какие state-доки обновлены, какие задачи созданы, что решено не трогать. Цикл замкнулся.'},
+]},
+{ id:'rotate', icon:'🧹', title:'Ротация памяти', sub:'1-го числа: логи и инсайты', steps:[
+  {a:'routine', t:'rotate-insights — 1-е число, 11:00', d:'Дейлики старше 4 недель сжимаются в weekly и уходят в _archive; weekly старше 3 месяцев — в monthly.'},
+  {a:'routine', t:'rotate-logs — раз в месяц', d:'Дневные логи старше 4 недель переезжают в _archive/logs. Дерево документов остаётся читаемым.'},
+  {a:'doc', t:'state/ не ротируется', d:'state — всегда актуальный снимок, история ему не нужна: суть уже перенесена синком, сырьё — в архиве.'},
+]},
+];
+
+const ENTITIES = [
+  ['Проект','Граница доступа. Токен агента выдаётся на проект и не видит ничего за его пределами.','воркспейс, команда'],
+  ['Цель','Куда проект должен прийти: деньги, трафик, релиз. Пишет владелец, агент сверяется, решая, за что взяться.','метрика, KPI, OKR'],
+  ['Токен','Ключ агента от одного проекта. За пределы проекта не действует.','API-ключ, credential'],
+  ['Задача','Единственная единица работы. Дерево любой глубины, всегда внутри одного проекта.','тикет, issue, стори'],
+  ['Эпик','Не сущность, а позиция в дереве: задача без родителя с детьми. Вычисляется, не хранится.','инициатива'],
+  ['Статус','todo, in_progress, done, cancelled. Общий набор, не настраивается.','колонка, этап'],
+  ['Приоритет','high / normal / low. Срок не перебивает — разбирает задачи внутри одного срока. Normal не показывается.','severity, P0/P1'],
+  ['Срок','День, когда задачу надо сделать. До срока задача агенту не показывается — её время не пришло.','дедлайн, напоминание'],
+  ['Комментарий','Запись в ленте задачи: человеческий или системный. Отдельной истории изменений нет.','событие, activity'],
+  ['Рекуррентная задача','При закрытии открывается заново со сдвинутым сроком. Одна запись на все повторы.','cron-задача'],
+  ['Документ','Текст в дереве папок, рендерится как Markdown. Только текущая версия — сохранение затирает.','вики, заметка, спек'],
+  ['Папка','Узел дерева документов без содержимого. Только для группировки.','директория, раздел'],
+  ['Автор','Кто создал или изменил запись — человек или агент. Различие видно в каждой записи.','пользователь, актор'],
+];
+
+const CADENCES = [
+  ['Каждый час — fix-task', [
+    [':06','fix-task · secscanner','Взять одну todo-задачу, реализовать, PR, CI, merge, done + отчёт.'],
+    [':37','fix-task · deckbook','Тот же цикл для самого Deckbook.'],
+    [':49','fix-task · pageradar','Тот же цикл для PageRadar.'],
+  ]],
+  ['Каждые 6 часов', [
+    ['*/6 ч','check-deploy','Статус деплоя в Coolify; красный → critical-задача. Пассивная.'],
+  ]],
+  ['Ежедневно', [
+    ['08:03','check-logs','SigNoz: error/warn и 5xx за 24ч, новые типы ошибок → лог + задачи.'],
+    ['08:25','pulse-analytics','Детектор поломок ключевых событий. Задача только при обвале, без отчёта.'],
+    ['ночь','sync-state','Вчерашний лог → обновить state/ → завести недостающие задачи.'],
+  ]],
+  ['Еженедельно', [
+    ['пн 09:03','check-funnel','Воронка, источники, активация, retention → лог + задачи на аномалии.'],
+    ['пн 10:06','check-seo','GSC, техчек, ключевики DataForSEO → лог + задачи.'],
+    ['пн 11:05','check-ads','Google Ads: расход, конверсии, поисковые запросы → лог + задачи.'],
+    ['вт 09:01','check-security','Зависимости, Dependabot, код, live-заголовки → лог + задачи.'],
+    ['вт 10:06','check-architecture','fallow: циклы, границы, сложность, дрейф структуры → лог + задачи.'],
+    ['ср 09:09','check-performance','SigNoz + Lighthouse mobile → лог + задачи.'],
+    ['ср 10:06','check-ux','Прохождение ключевых флоу на mobile/desktop → лог + задачи.'],
+    ['чт 09:10','check-docs','Дрейф state-доков против кода → лог + задачи на вводящее в заблуждение.'],
+  ]],
+  ['Ежемесячно — 1-е число', [
+    ['09:00','check-build','Аудит сборки и деплоя: Docker, CI, Coolify → задачи-предложения.'],
+    ['10:00','check-design','Визуальное качество против state/design → задачи на major.'],
+    ['11:00','rotate-insights','Дейлики → weekly → monthly, старое в _archive.'],
+    ['—','rotate-logs','Логи старше 4 недель → _archive/logs.'],
+  ]],
+];
+
+/* ── рендер ── */
+const $ = id => document.getElementById(id);
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x===b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id===b.dataset.s));
+});
+
+$('legend').innerHTML = Object.values(ACTORS)
+  .map(a => `<span><i style="background:${a.color}"></i>${a.label}</span>`).join('');
+
+let timer = null;
+function renderScenario(s){
+  clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
+  document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
+  $('flowTitle').textContent = s.icon + ' ' + s.title;
+  const box = $('steps');
+  box.classList.remove('playing');
+  box.innerHTML = s.steps.map((st,i) => {
+    const a = ACTORS[st.a];
+    return `<div class="step" data-i="${i}" style="border-left-color:${a.color}">
+      <div class="chip" style="color:${a.color}">${a.label}</div>
+      <h3>${st.t}</h3><p>${st.d}</p></div>`;
+  }).join('');
+  box.querySelectorAll('.step').forEach(el => el.onclick = () => {
+    box.classList.remove('playing');
+    box.querySelectorAll('.step').forEach(x => x.classList.toggle('hl', x===el && !x.classList.contains('hl')));
+  });
+}
+
+$('scenList').innerHTML = SCENARIOS.map(s =>
+  `<button data-id="${s.id}">${s.icon} ${s.title}<small>${s.sub}</small></button>`).join('');
+document.querySelectorAll('.scen-list button').forEach(b =>
+  b.onclick = () => renderScenario(SCENARIOS.find(s => s.id===b.dataset.id)));
+
+$('playBtn').onclick = () => {
+  const box = $('steps'), steps = [...box.querySelectorAll('.step')];
+  if (timer){ clearInterval(timer); timer=null; box.classList.remove('playing');
+    steps.forEach(x=>x.classList.remove('hl')); $('playBtn').textContent='▶ Проиграть'; return; }
+  let i = 0;
+  box.classList.add('playing'); $('playBtn').textContent='⏹ Стоп';
+  const tick = () => {
+    steps.forEach((x,k) => x.classList.toggle('hl', k===i));
+    if (++i > steps.length){ clearInterval(timer); timer=null; box.classList.remove('playing');
+      steps.forEach(x=>x.classList.remove('hl')); $('playBtn').textContent='▶ Проиграть'; }
+  };
+  tick(); timer = setInterval(tick, 1600);
+};
+
+$('entCards').innerHTML = ENTITIES.map(([n,d,av]) =>
+  `<div class="card"><h3>${n}</h3><p>${d}</p><div class="avoid">не называть: ${av}</div></div>`).join('');
+
+$('routCadences').innerHTML = CADENCES.map(([title, items]) =>
+  `<div class="cadence"><h2>${title}</h2><div class="routines">${
+    items.map(([t,n,d]) => `<div class="routine"><span class="t">${t}</span><div><b>${n}</b><p>${d}</p></div></div>`).join('')
+  }</div></div>`).join('');
+
+renderScenario(SCENARIOS[0]);
+</script>
+</body>
+</html>
