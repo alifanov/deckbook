@@ -386,6 +386,67 @@ details.reveal.drop > .pop textarea {
   margin-left: 4px;
 }
 
+/* ── две панели: дерево слева, содержимое справа ───────────────────── */
+
+.panes {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .panes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tree {
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.tree .file,
+.tree summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.tree summary::-webkit-details-marker {
+  display: none;
+}
+.tree .file:hover,
+.tree summary:hover {
+  background: var(--bg);
+  text-decoration: none;
+}
+.tree .file.here {
+  background: var(--accent-bg);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.tree .grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree .twist {
+  display: inline-flex;
+  color: var(--dim);
+}
+.tree details[open] > summary .twist {
+  transform: rotate(90deg);
+}
+.tree .kids {
+  margin-left: 15px;
+  padding-left: 6px;
+  border-left: 1px solid var(--rule);
+}
+
 /* Статус читается всей строкой, а не одной точкой: работа выступает вперёд,
    закрытое уходит в бумагу. */
 .list .item.in_progress > a,
