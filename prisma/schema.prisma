@@ -51,6 +51,13 @@ enum TaskStatus {
   cancelled
 }
 
+/// порядок объявления — это и порядок сортировки: high идёт первым при desc
+enum TaskPriority {
+  low
+  normal
+  high
+}
+
 model Task {
   id          String     @id @default(cuid())
   projectId   String
@@ -58,6 +65,8 @@ model Task {
   title       String
   description String     @default("")
   status      TaskStatus @default(todo)
+  /// важность задачи — тай-брейк внутри одного срока, а не отдельная очередь
+  priority    TaskPriority @default(normal)
   /// интервал повторения в днях; null у обычной задачи
   recurrence  Int?
   /// срок: день, в который задачу надо сделать. До срока задача не попадает

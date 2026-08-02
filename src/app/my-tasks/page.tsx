@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { isOverdue, listOwnerTasks } from "../../domain/tasks";
-import { Dot, dueDay, Header, plural, statusLabel } from "../../ui";
+import { Dot, dueDay, Header, plural, Prio, statusLabel } from "../../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,7 @@ export default async function MyTasksPage() {
                 <Link href={`/projects/${task.project.slug}`} className="muted">
                   {task.project.name}
                 </Link>
+                <Prio task={task} />
                 {task.dueAt &&
                   (isOverdue(task) ? (
                     <span className="bad">просрочена · {dueDay(task.dueAt)}</span>

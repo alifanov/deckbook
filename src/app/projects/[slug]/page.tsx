@@ -21,6 +21,7 @@ import {
   Header,
   Icon,
   plural,
+  Prio,
   ProjectNav,
   statusLabel,
 } from "../../../ui";
@@ -61,6 +62,7 @@ function Branch({ node, slug, top }: { node: TaskNode; slug: string; top?: boole
         {node.recurrence !== null && (
           <span className="muted">повтор {node.recurrence} дн.</span>
         )}
+        <Prio task={node} />
         <Due task={node} />
         <span className={node.status === "cancelled" ? "muted off" : "muted"}>
           {statusLabel(node.status)}
@@ -222,6 +224,7 @@ export default async function ProjectTasksPage({
                       {task.assignedToOwner ? "владелец" : task.assignee?.name}
                     </span>
                   )}
+                  <Prio task={task} />
                   <Due task={task} />
                   <span className={task.status === "cancelled" ? "muted off" : "muted"}>
                     {statusLabel(task.status)}

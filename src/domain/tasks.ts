@@ -3,7 +3,7 @@ import type { Author } from "./author";
 import { recordSystem } from "./comments";
 import { fail } from "./errors";
 import { buildTree, type Node } from "./tree";
-import type { Task, TaskStatus } from "../generated/prisma/client";
+import type { Task, TaskPriority, TaskStatus } from "../generated/prisma/client";
 
 export const STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
 
@@ -12,6 +12,9 @@ export const STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
  * С настоящим id не столкнётся — те выдаются как cuid.
  */
 export const OWNER_ASSIGNEE = "owner";
+
+/** От важного к неважному — в этом порядке приоритеты и показываются. */
+export const PRIORITIES = ["high", "normal", "low"] as const;
 
 export type TaskNode = Node<Task>;
 
@@ -23,6 +26,18 @@ export function parseStatus(value: string): TaskStatus {
   const status = asStatus(value);
   if (!status) fail(`Статуса «${value}» не существует; допустимы: ${STATUSES.join(", ")}`);
   return status;
+}
+
+/** Приоритет из набора или ничего — набор фиксирован, как и у статуса. */
+export const asPriority = (value: string | null | undefined): TaskPriority | null =>
+  (PRIORITIES as readonly string[]).includes(value ?? "") ? (value as TaskPriority) : null;
+
+export function parsePriority(value: string): TaskPriority {
+  const priority = asPriority(value);
+  if (!priority) {
+    fail(`Приоритета «${value}» не существует; допустимы: ${PRIORITIES.join(", ")}`);
+  }
+  return priority;
 }
 
 /** Срок — день, не момент: и хранение, и сравнение идут по полночи UTC. */
@@ -77,6 +92,7 @@ export async function createTask(
     title: string;
     description?: string;
     dueAt?: Date | null;
+    priority?: TaskPriority;
     assigneeTokenId?: string | null;
   },
   author: Author,
@@ -93,10 +109,21 @@ export async function createTask(
       title,
       description: input.description?.trim() ?? "",
       dueAt: input.dueAt ?? null,
+      priority: input.priority ?? "normal",
       assigneeTokenId: input.assigneeTokenId ?? null,
       createdByTokenId: author.tokenId,
     },
   });
+}
+
+/** Важность задачи. Снять её нельзя — можно только вернуть к normal. */
+export async function setPriority(id: string, priority: TaskPriority, author: Author) {
+  const before = await requireTask(id);
+  if (before.priority === priority) return before;
+
+  const updated = await prisma.task.update({ where: { id }, data: { priority } });
+  await recordSystem(id, `Приоритет: ${before.priority} → ${priority}`, author);
+  return updated;
 }
 
 /** Срок задачи. null снимает его — задача снова без даты. */
@@ -281,12 +308,14 @@ export async function listProjectTree(projectId: string): Promise<TaskNode[]> {
 /**
  * Плоский список задач — ответ на вопрос «что делать сейчас», и потому
  * единственное чтение, которое прячет ненаступившие сроки (ADR-0004).
- * Просроченное идёт первым, бессрочное — последним.
+ * Просроченное идёт первым, бессрочное — последним; приоритет разбирает
+ * задачи внутри одного срока, но срок не перебивает.
  */
 export function listTasks(
   projectId: string,
   filter: {
     status?: TaskStatus;
+    priority?: TaskPriority;
     assigneeTokenId?: string;
     assignedToOwner?: boolean;
     /** показать и то, чей срок ещё не наступил */
@@ -301,7 +330,11 @@ export function listTasks(
       ...(includeFuture ? {} : { OR: [{ dueAt: null }, { dueAt: { lte: today() } }] }),
     },
     include: { assignee: true, createdBy: true },
-    orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+    orderBy: [
+      { dueAt: { sort: "asc", nulls: "last" } },
+      { priority: "desc" },
+      { createdAt: "asc" },
+    ],
   });
 }
 
@@ -314,7 +347,11 @@ export const listOwnerTasks = () =>
   prisma.task.findMany({
     where: { assignedToOwner: true, status: { in: ["todo", "in_progress"] } },
     include: { project: true },
-    orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+    orderBy: [
+      { dueAt: { sort: "asc", nulls: "last" } },
+      { priority: "desc" },
+      { createdAt: "asc" },
+    ],
   });
 
 /** Задача с её поддеревом — то, что агент читает перед работой. */

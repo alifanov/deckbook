@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { TaskStatus } from "./generated/prisma/client";
+import type { TaskPriority, TaskStatus } from "./generated/prisma/client";
 
 export function Logo({ size = 18 }: { size?: number }) {
   return (
@@ -310,6 +310,22 @@ export const statusLabel = (status: TaskStatus) => STATUS_RU[status];
 export const Dot = ({ status }: { status: TaskStatus }) => (
   <span className={`dot ${status}`} />
 );
+
+const PRIORITY_RU: Record<TaskPriority, string> = {
+  high: "важно",
+  normal: "обычный",
+  low: "неважно",
+};
+
+export const priorityLabel = (priority: TaskPriority) => PRIORITY_RU[priority];
+
+/** Обычный приоритет — это отсутствие приоритета, его и не рисуем. */
+export const Prio = ({ task }: { task: { priority: TaskPriority } }) =>
+  task.priority === "normal" ? null : (
+    <span className={task.priority === "high" ? "bad" : "muted off"}>
+      {priorityLabel(task.priority)}
+    </span>
+  );
 
 /** «14 июля», с годом — только если он не текущий. */
 export function day(date: Date | string | null | undefined, utc = false): string {
