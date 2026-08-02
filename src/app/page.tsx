@@ -49,7 +49,13 @@ export default async function ProjectsPage({
 
             <div className="bar" style={{ gap: 20, marginTop: 12 }}>
               <span className="muted">
-                {plural(project._count.tasks, "задача", "задачи", "задач")} ·{" "}
+                {plural(
+                  project._count.tasks,
+                  "открытая задача",
+                  "открытые задачи",
+                  "открытых задач",
+                )}{" "}
+                ·{" "}
                 {plural(project._count.tokens, "агент", "агента", "агентов")}
               </span>
               <span className="spacer" />
