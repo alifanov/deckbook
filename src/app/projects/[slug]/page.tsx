@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectBySlug } from "../../../domain/projects";
+import { FilterForm } from "../../../filter";
 import {
   asStatus,
   countUnassigned,
@@ -154,7 +155,7 @@ export default async function ProjectTasksPage({
         <Banner error={error} />
 
         <div className="bar" style={{ gap: 8, marginBottom: 28 }}>
-          <form className="row" method="get" action={path}>
+          <FilterForm action={path}>
             <select name="status" defaultValue={status ?? ""}>
               <option value="">Любой статус</option>
               {STATUSES.map((s) => (
@@ -172,17 +173,19 @@ export default async function ProjectTasksPage({
                 </option>
               ))}
             </select>
-            <button className="plain" type="submit">
-              <Icon name="filter" />
-              Фильтровать
-            </button>
+            <noscript>
+              <button className="plain" type="submit">
+                <Icon name="filter" />
+                Фильтровать
+              </button>
+            </noscript>
             {filtering && (
               <Link className="act" href={path} style={{ marginLeft: 6 }}>
                 <Icon name="x" />
                 Сбросить
               </Link>
             )}
-          </form>
+          </FilterForm>
 
           <span className="spacer" />
 
