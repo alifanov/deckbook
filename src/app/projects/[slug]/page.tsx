@@ -8,6 +8,8 @@ import {
   countUnassigned,
   dailyFlow,
   type DayFlow,
+  hideClosed,
+  isClosed,
   isOverdue,
   listProjectTree,
   listTasks,
@@ -142,17 +144,26 @@ export default async function ProjectTasksPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string; status?: string; assignee?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    status?: string;
+    assignee?: string;
+    closed?: string;
+  }>;
 }) {
+  const { error, status, assignee, closed } = await searchParams;
   const { slug } = await params;
-  const { error, status, assignee } = await searchParams;
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
 
   const wanted = asStatus(status);
+  // по умолчанию список — про то, что ещё делать; закрытое показывается по просьбе,
+  // а выбранный руками статус говорит сам за себя и этому правилу не подчиняется
+  const showClosed = closed === "1" || wanted !== null;
   const filtering = Boolean(wanted || assignee);
-  const tree = filtering ? [] : await listProjectTree(project.id);
-  const flat = filtering
+  const whole = filtering ? [] : await listProjectTree(project.id);
+  const tree = showClosed ? whole : hideClosed(whole);
+  const found = filtering
     ? await listTasks(project.id, {
         ...(wanted ? { status: wanted } : {}),
         ...(assignee === OWNER_ASSIGNEE
@@ -164,6 +175,7 @@ export default async function ProjectTasksPage({
         includeFuture: true,
       })
     : [];
+  const flat = showClosed ? found : found.filter((task) => !isClosed(task));
   const all = await listTasks(project.id, { includeFuture: true });
   const tokens = await listTokens(project.id);
   const agents = tokens.filter((token) => token.revokedAt === null);
@@ -251,6 +263,19 @@ export default async function ProjectTasksPage({
                 </option>
               ))}
             </select>
+            {/* выбранный руками статус уже говорит, что показывать — тогда галочке нечего решать */}
+            {!wanted && (
+              <label className="muted row" style={{ gap: 6, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="closed"
+                  value="1"
+                  defaultChecked={showClosed}
+                  style={{ cursor: "pointer" }}
+                />
+                Показывать выполненные
+              </label>
+            )}
             <noscript>
               <button className="plain" type="submit">
                 <Icon name="filter" />
