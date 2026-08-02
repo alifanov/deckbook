@@ -19,6 +19,7 @@ describe("сводка по статусам", () => {
     expect(await countByStatus(project.id)).toEqual({
       todo: 1,
       in_progress: 1,
+      needs_human: 0,
       done: 1,
       cancelled: 0,
     });

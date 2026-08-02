@@ -170,11 +170,12 @@ describe("перемещение", () => {
 });
 
 describe("статусы и назначение", () => {
-  it("проходит по всем четырём статусам и отличает cancelled от done", async () => {
+  it("проходит по всем пяти статусам и отличает cancelled от done", async () => {
     const project = await makeProject();
     const task = await createTask({ projectId: project.id, title: "Задача" }, OWNER);
 
     expect((await setStatus(task.id, "in_progress", OWNER)).status).toBe("in_progress");
+    expect((await setStatus(task.id, "needs_human", OWNER)).status).toBe("needs_human");
     expect((await setStatus(task.id, "done", OWNER)).status).toBe("done");
     expect((await setStatus(task.id, "cancelled", OWNER)).status).toBe("cancelled");
   });
@@ -296,6 +297,24 @@ describe("статусы и назначение", () => {
     expect(mine.map((t) => t.project.name).sort()).toEqual(["A", "B"]);
     // счётчик в хидере считает ровно то же самое
     expect(await countOwnerTasks()).toBe(mine.length);
+  });
+
+  it("показывает владельцу задачу в needs_human, оставляя её на агенте", async () => {
+    const project = await makeProject();
+    const { token } = await makeToken(project.id);
+    const stuck = await createTask({ projectId: project.id, title: "Упёрлась" }, OWNER);
+    const going = await createTask({ projectId: project.id, title: "Идёт своим ходом" }, OWNER);
+    for (const task of [stuck, going]) await assignTask(task.id, token.id, OWNER);
+    const asked = await setStatus(stuck.id, "needs_human", OWNER);
+
+    // исполнителя не сменили — человек нужен для ответа, а не чтобы забрать работу
+    expect(asked.assigneeTokenId).toBe(token.id);
+    expect(asked.assignedToOwner).toBe(false);
+    expect(asked.lastClosedAt).toBeNull();
+
+    const mine = await listOwnerTasks();
+    expect(mine.map((t) => t.id)).toEqual([stuck.id]);
+    expect(await countOwnerTasks()).toBe(1);
   });
 
   it("правит заголовок и описание", async () => {

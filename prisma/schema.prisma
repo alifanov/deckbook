@@ -51,6 +51,9 @@ model Token {
 enum TaskStatus {
   todo
   in_progress
+  /// работа упёрлась в ответ человека: агент дальше не идёт, задача уходит
+  /// владельцу в «Мои задачи»
+  needs_human
   done
   cancelled
 }

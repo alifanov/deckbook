@@ -5,7 +5,7 @@ import { fail } from "./errors";
 import { buildTree, type Node } from "./tree";
 import type { Task, TaskPriority, TaskStatus } from "../generated/prisma/client";
 
-export const STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
+export const STATUSES = ["todo", "in_progress", "needs_human", "done", "cancelled"] as const;
 
 /**
  * Владелец в поле исполнителя: формы и фильтры шлют это вместо id токена.
@@ -23,7 +23,7 @@ export const isClosed = (task: { status: TaskStatus }) =>
   task.status === "done" || task.status === "cancelled";
 
 /** То же самое наоборот, списком — для запросов в базу. */
-export const OPEN_STATUSES: TaskStatus[] = ["todo", "in_progress"];
+export const OPEN_STATUSES: TaskStatus[] = ["todo", "in_progress", "needs_human"];
 
 /**
  * Убирает закрытые задачи из дерева. Закрытый родитель остаётся, если под ним
@@ -37,10 +37,11 @@ export const hideClosed = (nodes: TaskNode[]): TaskNode[] =>
 
 /** Порядок статусов в дереве: работа сверху, закрытое — вниз. */
 const TREE_RANK: Record<TaskStatus, number> = {
-  in_progress: 0,
-  todo: 1,
-  done: 2,
-  cancelled: 3,
+  needs_human: 0,
+  in_progress: 1,
+  todo: 2,
+  done: 3,
+  cancelled: 4,
 };
 
 /**
@@ -372,10 +373,16 @@ export function listTasks(
   });
 }
 
-/** Незакрытое на владельце — ровно то, что показывают «Мои задачи». */
+/**
+ * То, что показывают «Мои задачи»: незакрытое на владельце плюс всё, что упёрлось
+ * в needs_human. Такая задача ждёт ответа человека, кому бы ни была назначена, —
+ * иначе она застряла бы у агента, которого владелец не видит.
+ */
 const OWNER_OPEN = {
-  assignedToOwner: true,
-  status: { in: OPEN_STATUSES },
+  OR: [
+    { assignedToOwner: true, status: { in: OPEN_STATUSES } },
+    { status: "needs_human" as const },
+  ],
 };
 
 /**

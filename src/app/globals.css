@@ -456,6 +456,11 @@ details.reveal.drop > .pop textarea {
 .list .item.in_progress > .state {
   color: var(--live);
 }
+/* Ожидание человека — единственный статус, который зовёт: он окрашен тревожно. */
+.list .item.needs_human > a,
+.list .item.needs_human > .state {
+  color: var(--danger);
+}
 .list .item.done > a {
   color: var(--dim);
   text-decoration: line-through;
@@ -477,6 +482,10 @@ details.reveal.drop > .pop textarea {
 .dot.in_progress {
   background: var(--dot);
   border-color: var(--dot);
+}
+.dot.needs_human {
+  background: var(--danger);
+  border-color: var(--danger);
 }
 .dot.done {
   background: var(--dot-done);
@@ -505,7 +514,7 @@ details.reveal.drop > .pop textarea {
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -524,6 +533,9 @@ details.reveal.drop > .pop textarea {
 }
 .tile.in_progress .n {
   color: var(--live);
+}
+.tile.needs_human .n {
+  color: var(--danger);
 }
 .tile.done .n,
 .tile.cancelled .n {

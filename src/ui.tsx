@@ -284,6 +284,7 @@ export const Reveal = ({
 const STATUS_RU: Record<TaskStatus, string> = {
   todo: "открыта",
   in_progress: "в работе",
+  needs_human: "нужен человек",
   done: "готова",
   cancelled: "отменена",
 };
