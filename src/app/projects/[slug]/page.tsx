@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { getProjectBySlug } from "../../../domain/projects";
 import {
   asStatus,
+  countByStatus,
   countUnassigned,
+  dailyFlow,
+  type DayFlow,
   isOverdue,
   listProjectTree,
   listTasks,
@@ -11,6 +14,7 @@ import {
   STATUSES,
   type TaskNode,
 } from "../../../domain/tasks";
+import type { TaskStatus } from "../../../generated/prisma/client";
 import { listTokens } from "../../../domain/tokens";
 import {
   Back,
@@ -38,6 +42,59 @@ const Due = ({ task }: { task: { dueAt: Date | null } }) =>
       <span className="muted">срок {dueDay(task.dueAt)}</span>
     )
   ) : null;
+
+/** Сводка по статусам: где стоит проект, до того как читать сами задачи. */
+const Tiles = ({ counts }: { counts: Record<TaskStatus, number> }) => (
+  <div className="tiles">
+    {STATUSES.map((s) => (
+      <div className={`tile ${s}`} key={s}>
+        <span className="n">{counts[s]}</span>
+        <span className="muted">{statusLabel(s)}</span>
+      </div>
+    ))}
+  </div>
+);
+
+/** Столбик дня: заведено слева, закрыто справа. */
+const SLOT = 40;
+const FLOOR = 56;
+
+/** Темп работы по дням. ponytail: свой SVG, графическая библиотека тут лишняя. */
+function Flow({ flow }: { flow: DayFlow[] }) {
+  const peak = Math.max(1, ...flow.map((d) => Math.max(d.created, d.closed)));
+  const bar = (value: number) => (value / peak) * FLOOR;
+
+  return (
+    <svg
+      className="flow"
+      viewBox={`0 0 ${flow.length * SLOT} 70`}
+      role="img"
+      aria-label="Заведённые и закрытые задачи по дням"
+    >
+      {flow.map((d, i) => (
+        <g key={d.day} transform={`translate(${i * SLOT} 0)`}>
+          <rect
+            className="created"
+            x={6}
+            y={FLOOR - bar(d.created)}
+            width={13}
+            height={bar(d.created)}
+          />
+          <rect
+            className="closed"
+            x={21}
+            y={FLOOR - bar(d.closed)}
+            width={13}
+            height={bar(d.closed)}
+          />
+          <text x={20} y={66} textAnchor="middle">
+            {Number(d.day.slice(8))}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
 
 function Branch({ node, slug, top }: { node: TaskNode; slug: string; top?: boolean }) {
   const kids = node.children.length;
@@ -110,6 +167,8 @@ export default async function ProjectTasksPage({
   const tokens = await listTokens(project.id);
   const agents = tokens.filter((token) => token.revokedAt === null);
   const orphans = await countUnassigned(project.id);
+  const counts = await countByStatus(project.id);
+  const flow = await dailyFlow(project.id);
   const path = `/projects/${slug}`;
 
   return (
@@ -152,6 +211,25 @@ export default async function ProjectTasksPage({
           </Reveal>
         </div>
         <Banner error={error} />
+
+        {/* сводка идёт до фильтров: она про весь проект и от отбора не зависит */}
+        <Tiles counts={counts} />
+        <div className="card" style={{ marginBottom: 28 }}>
+          <div className="bar" style={{ alignItems: "baseline", gap: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 15 }}>Заведено и закрыто</h2>
+            <span className="muted">за {plural(flow.length, "день", "дня", "дней")}</span>
+            <span className="spacer" />
+            <span className="muted">
+              <span className="swatch" style={{ background: "var(--dot)" }} />
+              заведено
+            </span>
+            <span className="muted">
+              <span className="swatch" style={{ background: "var(--dot-done)" }} />
+              закрыто
+            </span>
+          </div>
+          <Flow flow={flow} />
+        </div>
 
         <div className="bar" style={{ gap: 8, marginBottom: 28 }}>
           <form className="row" method="get" action={path}>
