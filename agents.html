@@ -8,7 +8,7 @@
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --border:#2a2f3a;
     --text:#e6e9ef; --muted:#8b93a3;
-    --routine:#a78bfa; --task:#34d399; --doc:#60a5fa; --code:#fbbf24; --owner:#f472b6;
+    --routine:#a78bfa; --task:#34d399; --doc:#60a5fa; --code:#fbbf24; --owner:#f472b6; --plan:#f59e0b;
   }
   *{box-sizing:border-box; margin:0}
   body{background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:0 0 60px}
@@ -25,6 +25,10 @@
   section{display:none}
   section.on{display:block}
   .hint{color:var(--muted); font-size:13px; margin-bottom:16px}
+  .plan-badge{
+    display:inline-block; font-size:10.5px; font-weight:600; letter-spacing:.4px; text-transform:uppercase;
+    color:var(--plan); border:1px dashed var(--plan); border-radius:5px; padding:0 6px; margin-left:6px; vertical-align:1px;
+  }
 
   /* ── общий пайплайн ── */
   .pipeline{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:22px;
@@ -42,6 +46,7 @@
   }
   .scen-list button small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
   .scen-list button.on{border-color:#4b5468; background:var(--panel2)}
+  .scen-list button.plan{border-style:dashed}
   .flow-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap}
   .flow-head h2{font-size:17px}
   .play{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px}
@@ -73,10 +78,12 @@
 
   /* ── рутины ── */
   .cadence{margin-bottom:22px}
-  .cadence h2{font-size:15px; margin-bottom:8px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; font-size:12.5px}
+  .cadence h2{margin-bottom:8px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; font-size:12.5px}
   .routines{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px}
   .routine{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:11px 14px; display:flex; gap:10px}
+  .routine.plan{border-style:dashed; border-color:#4a3d1f}
   .routine .t{font-variant-numeric:tabular-nums; color:var(--routine); font-size:12.5px; white-space:nowrap; min-width:74px; padding-top:1px}
+  .routine.plan .t{color:var(--plan)}
   .routine b{font-size:14px; font-weight:600; display:block}
   .routine p{color:var(--muted); font-size:12.5px; margin-top:2px}
 
@@ -99,7 +106,7 @@
 
 <header>
   <h1>Deckbook × Агенты</h1>
-  <p>Как рутины, задачи и документы замыкаются в самоходный цикл. Данные — из реальных расписаний и команд.</p>
+  <p>Как рутины, задачи и документы замыкаются в самоходный цикл. Данные — из реальных расписаний и команд. Пунктир и метка <span class="plan-badge">план</span> — решено и заведено задачами, но ещё не работает.</p>
 </header>
 
 <nav>
@@ -147,7 +154,7 @@
 
 <!-- ══════════ РУТИНЫ ══════════ -->
 <section id="rout">
-  <p class="hint">Глобальные рутины: логика в <code>~/.claude/commands/deckbook/*.md</code>, крон только вызывает слэш-команду. Все пишут секцию в дневной лог и заводят задачи на проблемы — сами ничего не чинят (кроме fix-task).</p>
+  <p class="hint">Глобальные рутины: логика в <code>~/.claude/commands/deckbook/*.md</code>, крон только вызывает слэш-команду. Все пишут секцию в дневной лог и заводят задачи на проблемы — сами ничего не чинят (кроме fix-task). Пунктирные карточки — в плане, задачи заведены.</p>
   <div id="routCadences"></div>
 </section>
 
@@ -184,13 +191,10 @@
       <summary><b class="f">logs/</b><span class="d">дневные логи YYYY-MM-DD — общая лента всех рутин за день</span></summary>
       <div class="leaf">2026-08-02 <span class="d">секции: ## Логи (SigNoz) · ## Аналитика · ## Изменения · ## SEO · ## Security · ## Sync …</span></div>
     </details>
-    <details>
-      <summary><b class="f">insights/</b><span class="d">выжимки: daily → weekly → monthly</span></summary>
-      <div class="leaf">daily / weekly / monthly <span class="d">ротация раз в месяц</span></div>
-    </details>
+    <div class="leaf"><b class="f">insights/</b> <span class="plan-badge">под вопросом</span> <span class="d">сейчас никто не пишет; кандидат на weekly-дайджесты — судьба решается отдельной задачей</span></div>
     <div class="leaf"><b class="f">tasks</b> <span class="d">формат задач: ссылка на лог + критерии приёмки</span></div>
     <div class="leaf"><b class="f">README</b> <span class="d">пороги создания задач: 3+ лога подряд или 2+ независимых источника</span></div>
-    <div class="leaf"><b class="f">_archive/</b> <span class="d">логи старше 4 недель, инсайты после ротации</span></div>
+    <div class="leaf"><b class="f">_archive/</b> <span class="d">логи старше 4 недель</span></div>
   </div>
   <div class="note">
     <b>Правило потока:</b> рутины пишут только в <code>logs/</code> (сырьё за день). Ночью <code>sync-state</code> разбирает вчерашний лог и обновляет <code>state/</code> — так state остаётся снимком «сейчас», а не свалкой истории. В репозитории кода живут только <code>CONTEXT.md</code> и <code>docs/adr/</code>.
@@ -220,11 +224,18 @@ const SCENARIOS = [
   {a:'doc', t:'Строка в «## Изменения»', d:'fix-task дописывает в дневной лог строку: задача, суть, PR. Ночью её подхватит sync-state.'},
 ]},
 { id:'deploy', icon:'🔴', title:'Упал деплой', sub:'check-deploy → critical-задача', steps:[
-  {a:'routine', t:'check-deploy — каждые 6 часов', d:'Смотрит статус последнего деплоя в Coolify. Пассивная: не редеплоит, не рестартует, ничего не чинит сама.'},
+  {a:'routine', t:'check-deploy — каждые 6 часов', d:'Смотрит статус последнего деплоя в Coolify. Пассивная: не редеплоит, не рестартует, ничего не чинит сама. Пока покрыт только secscanner — deckbook и pageradar в плане.'},
   {a:'task', t:'Critical-задача при красном', d:'Красный деплой → задача с приоритетом high: логи деплоя, диагноз, что проверить.'},
   {a:'routine', t:'fix-task подхватывает', d:'В ближайший часовой прогон задача уходит в работу первой — просроченные и важные разбираются раньше бессрочных.'},
   {a:'code', t:'Фикс → PR → CI → merge', d:'Чинится причина падения (сборка, миграция, конфиг), пушится, мержится после зелёного CI — Coolify деплоит заново.'},
   {a:'doc', t:'След в дневном логе', d:'Инцидент виден в логе дня: секция check-deploy + строка в «Изменения» после фикса.'},
+]},
+{ id:'down', icon:'🕳', title:'Сайт лежит целиком', sub:'uptime-монитор → critical', plan:true, steps:[
+  {a:'routine', t:'Uptime-монитор (Uptime Kuma)', d:'Деплой зелёный, но сайт не отвечает — логов нет, check-logs и check-deploy молчат. Эту дыру закрывает внешний пинг доменов secscanner, deckbook, pageradar.'},
+  {a:'task', t:'Critical-задача при дауне', d:'Сайт не отвечает N минут → critical-задача в проекте с контекстом: с какого времени, какой код ответа.'},
+  {a:'routine', t:'fix-task берёт первой', d:'High-приоритет без срока — уходит в работу в ближайший часовой прогон.'},
+  {a:'code', t:'Диагноз и фикс', d:'Причина (контейнер, база, сеть) → фикс → деплой. Восстановление отмечается в задаче.'},
+  {a:'doc', t:'След в дневном логе', d:'Инцидент и время восстановления — в лог дня, ночной синк учтёт.'},
 ]},
 { id:'analytics', icon:'📉', title:'Косяк в аналитике', sub:'pulse-analytics / check-funnel', steps:[
   {a:'routine', t:'pulse-analytics — ежедневно 08:25', d:'Пульс: ключевые события за 24ч против предыдущих 24ч и среднего недели. Тихий — без отчёта, если всё в норме.'},
@@ -249,17 +260,36 @@ const SCENARIOS = [
   {a:'task', t:'done + отчёт', d:'В ленте задачи — что изменено, файлы, ссылка на PR. Утром достаточно открыть Deckbook и прочитать.'},
   {a:'doc', t:'Строка в «## Изменения»', d:'И след в дневном логе — ночной синк учтёт изменение в state.'},
 ]},
+{ id:'veto', icon:'✋', title:'Вето владельца', sub:'предложение аудита → срок +3 дня', plan:true, steps:[
+  {a:'routine', t:'Аудит нашёл «предложение»', d:'check-build, check-architecture и другие аудиты отличают инцидент (баг, падение — чинится сразу) от предложения (идея, рефакторинг, оптимизация).'},
+  {a:'task', t:'Задача со сроком «+3 дня»', d:'Предложение создаётся с dueAt = сегодня + 3 дня. По ADR-0004 срок прячет задачу: до его наступления её не видит ни один fix-task.'},
+  {a:'owner', t:'Окно вето — 3 дня', d:'Владелец видит будущие задачи (includeFuture) и решает: отменить (cancelled), поправить формулировку, поднять приоритет или просто не мешать.'},
+  {a:'routine', t:'Срок наступил → fix-task берёт', d:'Молчание — согласие: задача всплывает в рабочем списке и уходит в обычный цикл.'},
+  {a:'code', t:'Код → PR → CI → merge', d:'Дальше как всегда. Инциденты этим правилом не задерживаются — они идут без срока.'},
+]},
+{ id:'orphan', icon:'🛟', title:'Задача зависла', sub:'unstick → назад в todo', plan:true, steps:[
+  {a:'routine', t:'fix-task обломался', d:'Два красных CI подряд или оборвалась сессия — задача осталась in_progress. fix-task берёт только todo, значит сирота висела бы вечно.'},
+  {a:'routine', t:'unstick — ежедневно', d:'Рутина обходит все проекты: ищет in_progress старше 24 часов без новых комментариев.'},
+  {a:'task', t:'Комментарий + назад в todo', d:'В ленту задачи — причина возврата (что сломалось, где смотреть), статус снова todo. Контекст не теряется.'},
+  {a:'routine', t:'Следующий fix-task берёт заново', d:'Свежий заход с чистого листа, с учётом комментария о прошлой неудаче.'},
+]},
 { id:'sync', icon:'🌙', title:'Ночной синк состояния', sub:'лог дня → state/ → задачи', steps:[
   {a:'doc', t:'За день лог наполнился', d:'Каждая рутина и каждый фикс оставили секции в logs/YYYY-MM-DD: логи, аналитика, SEO, security, изменения.'},
-  {a:'routine', t:'sync-state — ночью', d:'Читает вчерашний лог целиком и раскладывает: что изменило состояние системы, а что осталось наблюдением.'},
+  {a:'routine', t:'sync-state — ежедневно 00:07', d:'Читает вчерашний лог целиком и раскладывает: что изменило состояние системы, а что осталось наблюдением.'},
   {a:'doc', t:'Обновление state/*', d:'Архитектурные решения → state/arch (D-NNNN); флоу и модель → state/spec; события → state/product/metrics; ставки → hypotheses; эксперименты → experiments (E-NNN). Кода не трогает.'},
   {a:'task', t:'Недостающие задачи', d:'Рекомендации, прошедшие порог из README (3+ лога подряд или 2+ источника) и ещё не заведённые → create_task. Refuted не возвращает, declined не пересоздаёт.'},
   {a:'doc', t:'Секция «## Sync» в лог', d:'Отметка: какие state-доки обновлены, какие задачи созданы, что решено не трогать. Цикл замкнулся.'},
 ]},
-{ id:'rotate', icon:'🧹', title:'Ротация памяти', sub:'1-го числа: логи и инсайты', steps:[
-  {a:'routine', t:'rotate-insights — 1-е число, 11:00', d:'Дейлики старше 4 недель сжимаются в weekly и уходят в _archive; weekly старше 3 месяцев — в monthly.'},
-  {a:'routine', t:'rotate-logs — раз в месяц', d:'Дневные логи старше 4 недель переезжают в _archive/logs. Дерево документов остаётся читаемым.'},
+{ id:'digest', icon:'📬', title:'Пятничный дайджест', sub:'product-overview → сводка недели', plan:true, steps:[
+  {a:'doc', t:'Неделя накопилась в logs/', d:'Семь дневных логов, done-задачи, открытые critical и предложения, ждущие вето.'},
+  {a:'routine', t:'product-overview — еженедельно', d:'Читает логи недели и задачи, собирает картину: что сделано, что нашли, что застряло.'},
+  {a:'doc', t:'Дайджест-документ', d:'Три раздела: «сделано» / «нашли» / «ждёт твоего решения». На пустой неделе — «изменений нет».'},
+  {a:'owner', t:'Одно чтение вместо семи логов', d:'Владелец читает сводку и раздаёт решения: вето на предложения, приоритеты, новые задачи. Система получает направление.'},
+]},
+{ id:'rotate', icon:'🧹', title:'Ротация памяти', sub:'1-го числа: логи в архив', steps:[
+  {a:'routine', t:'rotate-logs — 1-е число, 11:00', d:'Дневные логи старше 4 недель переезжают в _archive/logs — дерево документов остаётся читаемым. Крон пока называется rotate-insights, переименование заведено задачей.'},
   {a:'doc', t:'state/ не ротируется', d:'state — всегда актуальный снимок, история ему не нужна: суть уже перенесена синком, сырьё — в архиве.'},
+  {a:'doc', t:'insights/ — под вопросом', d:'Папку никто не пишет: либо сюда лягут weekly-дайджесты, либо она исчезнет из концепции. Решается отдельной задачей.'},
 ]},
 ];
 
@@ -271,7 +301,7 @@ const ENTITIES = [
   ['Эпик','Не сущность, а позиция в дереве: задача без родителя с детьми. Вычисляется, не хранится.','инициатива'],
   ['Статус','todo, in_progress, done, cancelled. Общий набор, не настраивается.','колонка, этап'],
   ['Приоритет','high / normal / low. Срок не перебивает — разбирает задачи внутри одного срока. Normal не показывается.','severity, P0/P1'],
-  ['Срок','День, когда задачу надо сделать. До срока задача агенту не показывается — её время не пришло.','дедлайн, напоминание'],
+  ['Срок','День, когда задачу надо сделать. До срока задача агенту не показывается — её время не пришло. На этом строятся ворота одобрения: предложениям ставят срок +3 дня — окно вето.','дедлайн, напоминание'],
   ['Комментарий','Запись в ленте задачи: человеческий или системный. Отдельной истории изменений нет.','событие, activity'],
   ['Рекуррентная задача','При закрытии открывается заново со сдвинутым сроком. Одна запись на все повторы.','cron-задача'],
   ['Документ','Текст в дереве папок, рендерится как Markdown. Только текущая версия — сохранение затирает.','вики, заметка, спек'],
@@ -279,6 +309,7 @@ const ENTITIES = [
   ['Автор','Кто создал или изменил запись — человек или агент. Различие видно в каждой записи.','пользователь, актор'],
 ];
 
+/* 4-й элемент true = в плане (задача заведена, рутина ещё не работает) */
 const CADENCES = [
   ['Каждый час — fix-task', [
     [':06','fix-task · secscanner','Взять одну todo-задачу, реализовать, PR, CI, merge, done + отчёт.'],
@@ -286,12 +317,18 @@ const CADENCES = [
     [':49','fix-task · pageradar','Тот же цикл для PageRadar.'],
   ]],
   ['Каждые 6 часов', [
-    ['*/6 ч','check-deploy','Статус деплоя в Coolify; красный → critical-задача. Пассивная.'],
+    ['*/6 ч','check-deploy · secscanner','Статус деплоя в Coolify; красный → critical-задача. Пассивная.'],
+    ['план','check-deploy · deckbook, pageradar','Та же проверка для остальных проектов — сейчас они без глаз.', true],
   ]],
   ['Ежедневно', [
-    ['08:03','check-logs','SigNoz: error/warn и 5xx за 24ч, новые типы ошибок → лог + задачи.'],
+    ['00:07','sync-state','Вчерашний лог → обновить state/ → завести недостающие задачи.'],
+    ['08:03','check-logs · secscanner','SigNoz: error/warn и 5xx за 24ч, новые типы ошибок → лог + задачи.'],
     ['08:25','pulse-analytics','Детектор поломок ключевых событий. Задача только при обвале, без отчёта.'],
-    ['ночь','sync-state','Вчерашний лог → обновить state/ → завести недостающие задачи.'],
+    ['план','check-logs · deckbook, pageradar','Логи остальных проектов → задачи.', true],
+    ['план','unstick','in_progress старше суток без активности → комментарий + назад в todo.', true],
+  ]],
+  ['Постоянно', [
+    ['план','uptime-мониторы','Uptime Kuma пингует домены всех проектов; даун → critical-задача.', true],
   ]],
   ['Еженедельно', [
     ['пн 09:03','check-funnel','Воронка, источники, активация, retention → лог + задачи на аномалии.'],
@@ -302,17 +339,21 @@ const CADENCES = [
     ['ср 09:09','check-performance','SigNoz + Lighthouse mobile → лог + задачи.'],
     ['ср 10:06','check-ux','Прохождение ключевых флоу на mobile/desktop → лог + задачи.'],
     ['чт 09:10','check-docs','Дрейф state-доков против кода → лог + задачи на вводящее в заблуждение.'],
+    ['план','product-overview','Дайджест недели: сделано / нашли / ждёт решения — одним документом.', true],
   ]],
   ['Ежемесячно — 1-е число', [
     ['09:00','check-build','Аудит сборки и деплоя: Docker, CI, Coolify → задачи-предложения.'],
     ['10:00','check-design','Визуальное качество против state/design → задачи на major.'],
-    ['11:00','rotate-insights','Дейлики → weekly → monthly, старое в _archive.'],
-    ['—','rotate-logs','Логи старше 4 недель → _archive/logs.'],
+    ['11:00','rotate-logs','Логи старше 4 недель → _archive/logs. Крон пока называется rotate-insights — переименование в задачах.'],
+  ]],
+  ['Механика, не рутина', [
+    ['план','Ворота одобрения','Аудиты создают предложения со сроком +3 дня (ADR-0004: срок прячет задачу) — окно вето владельца. Инциденты идут без срока.', true],
   ]],
 ];
 
 /* ── рендер ── */
 const $ = id => document.getElementById(id);
+const planBadge = '<span class="plan-badge">план</span>';
 
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x===b));
@@ -326,7 +367,7 @@ let timer = null;
 function renderScenario(s){
   clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
   document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
-  $('flowTitle').textContent = s.icon + ' ' + s.title;
+  $('flowTitle').innerHTML = s.icon + ' ' + s.title + (s.plan ? planBadge : '');
   const box = $('steps');
   box.classList.remove('playing');
   box.innerHTML = s.steps.map((st,i) => {
@@ -342,7 +383,7 @@ function renderScenario(s){
 }
 
 $('scenList').innerHTML = SCENARIOS.map(s =>
-  `<button data-id="${s.id}">${s.icon} ${s.title}<small>${s.sub}</small></button>`).join('');
+  `<button data-id="${s.id}" class="${s.plan?'plan':''}">${s.icon} ${s.title}${s.plan?planBadge:''}<small>${s.sub}</small></button>`).join('');
 document.querySelectorAll('.scen-list button').forEach(b =>
   b.onclick = () => renderScenario(SCENARIOS.find(s => s.id===b.dataset.id)));
 
@@ -365,7 +406,7 @@ $('entCards').innerHTML = ENTITIES.map(([n,d,av]) =>
 
 $('routCadences').innerHTML = CADENCES.map(([title, items]) =>
   `<div class="cadence"><h2>${title}</h2><div class="routines">${
-    items.map(([t,n,d]) => `<div class="routine"><span class="t">${t}</span><div><b>${n}</b><p>${d}</p></div></div>`).join('')
+    items.map(([t,n,d,plan]) => `<div class="routine ${plan?'plan':''}"><span class="t">${t}</span><div><b>${n}</b><p>${d}</p></div></div>`).join('')
   }</div></div>`).join('');
 
 renderScenario(SCENARIOS[0]);
