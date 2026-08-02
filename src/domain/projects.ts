@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { fail } from "./errors";
+import { OPEN_STATUSES } from "./tasks";
 
 /** Человекочитаемый идентификатор проекта для адреса MCP-сервера. */
 export function slugify(name: string): string {
@@ -24,14 +25,18 @@ export async function createProject(name: string) {
   }
 }
 
-/** Список проектов вместе с тем, что на карточке проекта и так видно. */
+/**
+ * Список проектов вместе с тем, что на карточке проекта и так видно.
+ * Задачи считаем только открытые: на карточке важно, сколько осталось сделать,
+ * а не сколько накопилось за всё время.
+ */
 export function listProjects() {
   return prisma.project.findMany({
     orderBy: { createdAt: "asc" },
     include: {
       _count: {
         select: {
-          tasks: true,
+          tasks: { where: { status: { in: OPEN_STATUSES } } },
           tokens: { where: { revokedAt: null } },
         },
       },

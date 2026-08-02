@@ -22,6 +22,9 @@ export type TaskNode = Node<Task>;
 export const isClosed = (task: { status: TaskStatus }) =>
   task.status === "done" || task.status === "cancelled";
 
+/** То же самое наоборот, списком — для запросов в базу. */
+export const OPEN_STATUSES: TaskStatus[] = ["todo", "in_progress"];
+
 /**
  * Убирает закрытые задачи из дерева. Закрытый родитель остаётся, если под ним
  * ещё есть открытое, — иначе живые подзадачи исчезли бы вместе с ним.
@@ -372,7 +375,7 @@ export function listTasks(
 /** Незакрытое на владельце — ровно то, что показывают «Мои задачи». */
 const OWNER_OPEN = {
   assignedToOwner: true,
-  status: { in: ["todo", "in_progress"] as TaskStatus[] },
+  status: { in: OPEN_STATUSES },
 };
 
 /**
