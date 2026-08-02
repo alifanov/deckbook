@@ -7,6 +7,12 @@ import type { Task, TaskStatus } from "../generated/prisma/client";
 
 export const STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
 
+/**
+ * Владелец в поле исполнителя: формы и фильтры шлют это вместо id токена.
+ * С настоящим id не столкнётся — те выдаются как cuid.
+ */
+export const OWNER_ASSIGNEE = "owner";
+
 export type TaskNode = Node<Task>;
 
 /** Статус из набора или ничего — набор фиксирован и не настраивается. */
@@ -195,14 +201,28 @@ export async function assignTask(id: string, tokenId: string | null, author: Aut
 
   const updated = await prisma.task.update({
     where: { id },
-    data: { assigneeTokenId: tokenId },
+    data: { assigneeTokenId: tokenId, assignedToOwner: false },
   });
   await recordSystem(id, tokenId ? "Задача назначена на агента" : "Назначение снято", author);
   return updated;
 }
 
+/** Задача на владельце: агента у неё нет, в my_tasks она не попадает. */
+export async function assignTaskToOwner(id: string, author: Author) {
+  await requireTask(id);
+  const updated = await prisma.task.update({
+    where: { id },
+    data: { assigneeTokenId: null, assignedToOwner: true },
+  });
+  await recordSystem(id, "Задача назначена на владельца", author);
+  return updated;
+}
+
+/** Ничья — ни агента, ни владельца: такую задачу никто не увидит в своих списках. */
+const UNASSIGNED = { assigneeTokenId: null, assignedToOwner: false } as const;
+
 export const countUnassigned = (projectId: string) =>
-  prisma.task.count({ where: { projectId, assigneeTokenId: null } });
+  prisma.task.count({ where: { projectId, ...UNASSIGNED } });
 
 /**
  * Раздаёт агенту все ничьи задачи проекта разом. Ничья задача не попадает
@@ -210,7 +230,7 @@ export const countUnassigned = (projectId: string) =>
  */
 export async function assignUnassigned(projectId: string, tokenId: string, author: Author) {
   const orphans = await prisma.task.findMany({
-    where: { projectId, assigneeTokenId: null },
+    where: { projectId, ...UNASSIGNED },
     select: { id: true },
   });
   // ponytail: по одной, ради записи в ленту каждой задачи; пачками, если станет тысячи
@@ -268,6 +288,7 @@ export function listTasks(
   filter: {
     status?: TaskStatus;
     assigneeTokenId?: string;
+    assignedToOwner?: boolean;
     /** показать и то, чей срок ещё не наступил */
     includeFuture?: boolean;
   } = {},
@@ -283,6 +304,18 @@ export function listTasks(
     orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
   });
 }
+
+/**
+ * Задачи владельца — из всех проектов сразу: у владельца границы проекта нет.
+ * Закрытое не показываем, ненаступившие сроки прячутся только от агента
+ * (ADR-0004). Порядок тот же: просроченное первым, бессрочное последним.
+ */
+export const listOwnerTasks = () =>
+  prisma.task.findMany({
+    where: { assignedToOwner: true, status: { in: ["todo", "in_progress"] } },
+    include: { project: true },
+    orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+  });
 
 /** Задача с её поддеревом — то, что агент читает перед работой. */
 export async function getTaskTree(id: string): Promise<TaskNode> {

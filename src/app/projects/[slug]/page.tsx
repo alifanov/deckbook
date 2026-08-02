@@ -7,6 +7,7 @@ import {
   isOverdue,
   listProjectTree,
   listTasks,
+  OWNER_ASSIGNEE,
   STATUSES,
   type TaskNode,
 } from "../../../domain/tasks";
@@ -95,7 +96,11 @@ export default async function ProjectTasksPage({
   const flat = filtering
     ? await listTasks(project.id, {
         ...(wanted ? { status: wanted } : {}),
-        ...(assignee ? { assigneeTokenId: assignee } : {}),
+        ...(assignee === OWNER_ASSIGNEE
+          ? { assignedToOwner: true }
+          : assignee
+            ? { assigneeTokenId: assignee }
+            : {}),
         // владелец видит всё: срок прячет задачи только от агента (ADR-0004)
         includeFuture: true,
       })
@@ -130,6 +135,7 @@ export default async function ProjectTasksPage({
             </select>
             <select name="assignee" defaultValue={assignee ?? ""}>
               <option value="">Любой исполнитель</option>
+              <option value={OWNER_ASSIGNEE}>Владелец</option>
               {tokens.map((token) => (
                 <option key={token.id} value={token.id}>
                   {token.name}
@@ -211,7 +217,11 @@ export default async function ProjectTasksPage({
                   <Link href={`/projects/${slug}/tasks/${task.id}`} className="grow">
                     {task.title}
                   </Link>
-                  {task.assignee && <span className="muted">{task.assignee.name}</span>}
+                  {(task.assignedToOwner || task.assignee) && (
+                    <span className="muted">
+                      {task.assignedToOwner ? "владелец" : task.assignee?.name}
+                    </span>
+                  )}
                   <Due task={task} />
                   <span className={task.status === "cancelled" ? "muted off" : "muted"}>
                     {statusLabel(task.status)}
