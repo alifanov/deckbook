@@ -37,18 +37,16 @@ const Subtree = ({ nodes, slug }: { nodes: TaskNode[]; slug: string }) => (
   <>
     {nodes.map((node) => (
       <div key={node.id}>
-        <div className="item">
+        <div className={`item ${node.status}`}>
           <Dot status={node.status} />
           <Link
             href={`/projects/${slug}/tasks/${node.id}`}
-            className={node.status === "cancelled" ? "grow off" : "grow"}
+            className="grow"
             style={{ fontSize: 16 }}
           >
             {node.title}
           </Link>
-          <span className={node.status === "cancelled" ? "muted off" : "muted"}>
-            {statusLabel(node.status)}
-          </span>
+          <span className="muted state">{statusLabel(node.status)}</span>
         </div>
         {node.children.length > 0 && (
           <div className="kids">

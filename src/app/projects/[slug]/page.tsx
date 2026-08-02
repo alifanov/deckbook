@@ -44,7 +44,7 @@ function Branch({ node, slug, top }: { node: TaskNode; slug: string; top?: boole
 
   return (
     <>
-      <div className="item">
+      <div className={`item ${node.status}`}>
         <Dot status={node.status} />
         <Link
           href={`/projects/${slug}/tasks/${node.id}`}
@@ -65,9 +65,7 @@ function Branch({ node, slug, top }: { node: TaskNode; slug: string; top?: boole
         )}
         <Prio task={node} />
         <Due task={node} />
-        <span className={node.status === "cancelled" ? "muted off" : "muted"}>
-          {statusLabel(node.status)}
-        </span>
+        <span className="muted state">{statusLabel(node.status)}</span>
       </div>
 
       {kids > 0 && (
@@ -244,7 +242,7 @@ export default async function ProjectTasksPage({
           ) : (
             <div className="card tight list">
               {flat.map((task) => (
-                <div className="item" key={task.id}>
+                <div className={`item ${task.status}`} key={task.id}>
                   <Dot status={task.status} />
                   <Link href={`/projects/${slug}/tasks/${task.id}`} className="grow">
                     {task.title}
@@ -256,9 +254,7 @@ export default async function ProjectTasksPage({
                   )}
                   <Prio task={task} />
                   <Due task={task} />
-                  <span className={task.status === "cancelled" ? "muted off" : "muted"}>
-                    {statusLabel(task.status)}
-                  </span>
+                  <span className="muted state">{statusLabel(task.status)}</span>
                 </div>
               ))}
             </div>

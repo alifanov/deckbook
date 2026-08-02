@@ -15,6 +15,7 @@
   --dot: #7d9a5b;
   --dot-done: #b9c9a6;
   --dot-line: #cfc7b8;
+  --live: #33668a;
   --danger: #a8574f;
   --danger-bg: #fbf1ef;
   --danger-line: #edd9d4;
@@ -396,6 +397,22 @@ details.reveal.drop > .pop textarea {
   padding-left: 24px;
   border-left: 1px solid var(--rule);
   margin-left: 4px;
+}
+
+/* Статус читается всей строкой, а не одной точкой: работа выступает вперёд,
+   закрытое уходит в бумагу. */
+.list .item.in_progress > a,
+.list .item.in_progress > .state {
+  color: var(--live);
+}
+.list .item.done > a {
+  color: var(--dim);
+  text-decoration: line-through;
+}
+.list .item.done > .state,
+.list .item.cancelled > a,
+.list .item.cancelled > .state {
+  color: var(--dim);
 }
 
 .dot {
