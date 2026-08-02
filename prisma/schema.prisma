@@ -67,6 +67,9 @@ model Task {
   lastClosedAt DateTime?
 
   assigneeTokenId  String?
+  /// исполнитель — владелец, а не агент. Взаимоисключимо с assigneeTokenId:
+  /// назначение на одного снимает другого. Ничья задача — оба пусты.
+  assignedToOwner  Boolean @default(false)
   createdByTokenId String?
 
   createdAt DateTime @default(now())

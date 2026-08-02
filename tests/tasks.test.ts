@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { OWNER, agent } from "../src/domain/author";
 import {
   assignTask,
+  assignTaskToOwner,
   assignUnassigned,
   countUnassigned,
   createTask,
   deleteTask,
   getTaskTree,
+  listOwnerTasks,
   listProjectTree,
   listTasks,
   moveTask,
@@ -244,6 +246,52 @@ describe("статусы и назначение", () => {
     expect((await listTasks(project.id, { assigneeTokenId: other.id })).map((t) => t.id)).toEqual([
       taken.id,
     ]);
+  });
+
+  it("назначает задачу на владельца, снимая агента, и обратно", async () => {
+    const project = await makeProject();
+    const { token } = await makeToken(project.id);
+    const task = await createTask({ projectId: project.id, title: "Задача" }, OWNER);
+    await assignTask(task.id, token.id, OWNER);
+
+    const owned = await assignTaskToOwner(task.id, OWNER);
+    expect(owned.assignedToOwner).toBe(true);
+    expect(owned.assigneeTokenId).toBeNull();
+
+    const back = await assignTask(task.id, token.id, OWNER);
+    expect(back.assignedToOwner).toBe(false);
+    expect(back.assigneeTokenId).toBe(token.id);
+  });
+
+  it("задача на владельце не ничья: раздача агенту её не трогает", async () => {
+    const project = await makeProject();
+    const { token } = await makeToken(project.id);
+    const mine = await createTask({ projectId: project.id, title: "Моя" }, OWNER);
+    await createTask({ projectId: project.id, title: "Ничья" }, OWNER);
+    await assignTaskToOwner(mine.id, OWNER);
+
+    expect(await countUnassigned(project.id)).toBe(1);
+    await assignUnassigned(project.id, token.id, OWNER);
+
+    expect((await listTasks(project.id, { assignedToOwner: true })).map((t) => t.id)).toEqual([
+      mine.id,
+    ]);
+  });
+
+  it("собирает задачи владельца из всех проектов, кроме закрытых", async () => {
+    const a = await makeProject("A");
+    const b = await makeProject("B");
+    const first = await createTask({ projectId: a.id, title: "Первая" }, OWNER);
+    const second = await createTask({ projectId: b.id, title: "Вторая" }, OWNER);
+    const closed = await createTask({ projectId: b.id, title: "Закрытая" }, OWNER);
+    const agents = await createTask({ projectId: a.id, title: "Агентская" }, OWNER);
+    for (const task of [first, second, closed]) await assignTaskToOwner(task.id, OWNER);
+    await setStatus(closed.id, "done", OWNER);
+
+    const mine = await listOwnerTasks();
+    expect(mine.map((t) => t.id).sort()).toEqual([first.id, second.id].sort());
+    expect(mine.map((t) => t.id)).not.toContain(agents.id);
+    expect(mine.map((t) => t.project.name).sort()).toEqual(["A", "B"]);
   });
 
   it("правит заголовок и описание", async () => {

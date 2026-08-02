@@ -9,6 +9,7 @@ import {
   getTaskTree,
   isOverdue,
   listTasks,
+  OWNER_ASSIGNEE,
   STATUSES,
   type TaskNode,
 } from "../../../../../domain/tasks";
@@ -103,7 +104,9 @@ export default async function TaskPage({
             <Dot status={task.status} />
             {statusLabel(task.status)}
           </span>
-          <span className="muted">{task.assignee?.name ?? "ничья"}</span>
+          <span className="muted">
+            {task.assignedToOwner ? "владелец" : (task.assignee?.name ?? "ничья")}
+          </span>
           {task.dueAt && (
             <span className={isOverdue(task) ? "bad" : "muted"}>
               {isOverdue(task) ? "просрочена · " : "срок "}
@@ -137,8 +140,14 @@ export default async function TaskPage({
               <Back path={path} />
               <input type="hidden" name="intent" value="assign" />
               <input type="hidden" name="id" value={id} />
-              <select name="tokenId" defaultValue={task.assigneeTokenId ?? ""}>
+              <select
+                name="tokenId"
+                defaultValue={
+                  task.assignedToOwner ? OWNER_ASSIGNEE : (task.assigneeTokenId ?? "")
+                }
+              >
                 <option value="">не назначена</option>
+                <option value={OWNER_ASSIGNEE}>владелец</option>
                 {tokens.map((token) => (
                   <option key={token.id} value={token.id}>
                     {token.name}

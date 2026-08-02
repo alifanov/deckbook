@@ -155,6 +155,10 @@ export function Header({ children }: { children?: ReactNode }) {
         </Link>
         {children}
         <span className="spacer" />
+        <Link className="act" href="/my-tasks">
+          <Icon name="check" />
+          Мои задачи
+        </Link>
         <form method="post" action="/api/session">
           <input type="hidden" name="intent" value="logout" />
           <button className="act" type="submit">

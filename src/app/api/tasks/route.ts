@@ -2,10 +2,12 @@ import { OWNER } from "../../../domain/author";
 import { addComment } from "../../../domain/comments";
 import {
   assignTask,
+  assignTaskToOwner,
   assignUnassigned,
   createTask,
   deleteTask,
   moveTask,
+  OWNER_ASSIGNEE,
   parseDueDate,
   parseStatus,
   setDueDate,
@@ -43,9 +45,12 @@ export const POST = formHandler(async (form) => {
       await setStatus(id, parseStatus(text(form, "status")), OWNER);
       return;
 
-    case "assign":
-      await assignTask(id, optional(form, "tokenId"), OWNER);
+    case "assign": {
+      const assignee = optional(form, "tokenId");
+      if (assignee === OWNER_ASSIGNEE) await assignTaskToOwner(id, OWNER);
+      else await assignTask(id, assignee, OWNER);
       return;
+    }
 
     case "assign-unassigned":
       await assignUnassigned(text(form, "projectId"), text(form, "tokenId"), OWNER);
