@@ -331,4 +331,27 @@ describe("скрытие закрытых задач", () => {
     expect(visible.map((node) => node.id)).toEqual([open.id, epic.id]);
     expect(visible[1].children.map((node) => node.id)).toEqual([alive.id]);
   });
+
+  it("ставит задачи в работе выше, а закрытые — в конец, на каждом уровне", async () => {
+    const project = await makeProject();
+    const epic = await createTask({ projectId: project.id, title: "Эпик" }, OWNER);
+    const names = ["Сделанная", "Отменённая", "Открытая", "В работе"];
+    const made = [];
+    for (const title of names) {
+      made.push(await createTask({ projectId: project.id, parentId: epic.id, title }, OWNER));
+    }
+    const [done, cancelled, , running] = made;
+    await setStatus(done.id, "done", OWNER);
+    await setStatus(cancelled.id, "cancelled", OWNER);
+    await setStatus(running.id, "in_progress", OWNER);
+
+    const [root] = await listProjectTree(project.id);
+
+    expect(root.children.map((node) => node.title)).toEqual([
+      "В работе",
+      "Открытая",
+      "Сделанная",
+      "Отменённая",
+    ]);
+  });
 });
