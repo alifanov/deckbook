@@ -10,6 +10,7 @@ import {
   isOverdue,
   listTasks,
   OWNER_ASSIGNEE,
+  PRIORITIES,
   STATUSES,
   type TaskNode,
 } from "../../../../../domain/tasks";
@@ -23,6 +24,8 @@ import {
   Header,
   Icon,
   moment,
+  Prio,
+  priorityLabel,
   ProjectNav,
   Reveal,
   statusLabel,
@@ -107,6 +110,7 @@ export default async function TaskPage({
           <span className="muted">
             {task.assignedToOwner ? "владелец" : (task.assignee?.name ?? "ничья")}
           </span>
+          <Prio task={task} />
           {task.dueAt && (
             <span className={isOverdue(task) ? "bad" : "muted"}>
               {isOverdue(task) ? "просрочена · " : "срок "}
@@ -133,6 +137,23 @@ export default async function TaskPage({
               <button type="submit">
                 <Icon name="check" />
                 Статус
+              </button>
+            </form>
+
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="priority" />
+              <input type="hidden" name="id" value={id} />
+              <select name="priority" defaultValue={task.priority}>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
+                ))}
+              </select>
+              <button type="submit">
+                <Icon name="check" />
+                Приоритет
               </button>
             </form>
 

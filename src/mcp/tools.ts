@@ -1,3 +1,4 @@
+import type { TaskPriority } from "../generated/prisma/client";
 import type { Author } from "../domain/author";
 import { addComment, listComments } from "../domain/comments";
 import {
@@ -20,9 +21,11 @@ import {
   listTasks,
   moveTask,
   parseDueDate,
+  parsePriority,
   parseStatus,
   requireTaskInProject,
   setDueDate,
+  setPriority,
   setStatus,
   type TaskNode,
 } from "../domain/tasks";
@@ -58,6 +61,10 @@ const bool = (description: string) => ({ type: "boolean", description });
 const due = (task: { dueAt: Date | null }) =>
   task.dueAt ? { dueAt: asDay(task.dueAt), overdue: isOverdue(task) } : {};
 
+/** Обычный приоритет ничего не сообщает — в ответ он и не попадает. */
+const prio = (task: { priority: TaskPriority }) =>
+  task.priority === "normal" ? {} : { priority: task.priority };
+
 // границу проекта проверяет домен: правило одно на обе поверхности
 const requireOwnTask = (id: string, ctx: McpContext) => requireTaskInProject(id, ctx.projectId);
 const requireOwnDocument = (id: string, ctx: McpContext) =>
@@ -69,6 +76,7 @@ const renderTask = (task: TaskNode | Awaited<ReturnType<typeof getTaskTree>>): u
   description: task.description,
   status: task.status,
   assigneeTokenId: task.assigneeTokenId,
+  ...prio(task),
   ...due(task),
   subtasks: task.children.map(renderTask),
 });
@@ -99,12 +107,14 @@ export const TOOLS: Tool[] = [
     description:
       "Задачи проекта, назначенные на тебя. Начинай работу с этого списка. " +
       "Задачи со сроком в будущем в список не входят — их время ещё не пришло, браться за них рано. " +
-      "Сначала идут просроченные, потом сегодняшние, потом бессрочные. " +
+      "Сначала идут просроченные, потом сегодняшние, потом бессрочные; внутри одного срока " +
+      "первым идёт высокий приоритет. " +
       "includeFuture покажет и будущие — бери его, только если тебя спросили про планы, а не про работу.",
     inputSchema: {
       type: "object",
       properties: {
         status: str("необязательный фильтр: todo, in_progress, done, cancelled"),
+        priority: str("необязательный фильтр: high, normal, low"),
         includeFuture: bool("показать задачи, чей срок ещё не наступил; по умолчанию false"),
       },
     },
@@ -112,9 +122,16 @@ export const TOOLS: Tool[] = [
       const tasks = await listTasks(ctx.projectId, {
         assigneeTokenId: ctx.tokenId,
         ...(args.status ? { status: parseStatus(args.status) } : {}),
+        ...(args.priority ? { priority: parsePriority(args.priority) } : {}),
         includeFuture: args.includeFuture === true,
       });
-      return tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, ...due(t) }));
+      return tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        ...prio(t),
+        ...due(t),
+      }));
     },
   },
   {
@@ -146,6 +163,7 @@ export const TOOLS: Tool[] = [
         description: str("описание, необязательно"),
         parentTaskId: str("родительская задача, необязательно"),
         dueAt: str("срок в виде ГГГГ-ММ-ДД, необязательно"),
+        priority: str("high, normal или low; по умолчанию normal"),
         assignee: str("имя агента-исполнителя из project_info; по умолчанию задача ничья"),
       },
       required: ["title"],
@@ -160,6 +178,7 @@ export const TOOLS: Tool[] = [
           title: args.title,
           description: args.description,
           dueAt: args.dueAt ? parseDueDate(args.dueAt) : null,
+          ...(args.priority ? { priority: parsePriority(args.priority) } : {}),
           assigneeTokenId: assignee?.id ?? null,
         },
         ctx.author,
@@ -169,8 +188,26 @@ export const TOOLS: Tool[] = [
         title: task.title,
         status: task.status,
         assignee: assignee?.name ?? null,
+        ...prio(task),
         ...due(task),
       };
+    },
+  },
+  {
+    name: "set_task_priority",
+    description:
+      "Ставит задаче приоритет: high, normal или low. Других приоритетов не существует. " +
+      "Приоритет не перебивает срок, а разбирает задачи внутри одного срока: в my_tasks " +
+      "важное всплывает выше среди задач с той же датой и среди бессрочных.",
+    inputSchema: {
+      type: "object",
+      properties: { taskId: str("идентификатор задачи"), priority: str("новый приоритет") },
+      required: ["taskId", "priority"],
+    },
+    run: async (args, ctx) => {
+      await requireOwnTask(args.taskId, ctx);
+      const task = await setPriority(args.taskId, parsePriority(args.priority), ctx.author);
+      return { id: task.id, priority: task.priority };
     },
   },
   {

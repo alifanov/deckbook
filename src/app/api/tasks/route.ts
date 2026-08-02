@@ -9,8 +9,10 @@ import {
   moveTask,
   OWNER_ASSIGNEE,
   parseDueDate,
+  parsePriority,
   parseStatus,
   setDueDate,
+  setPriority,
   setRecurrence,
   setStatus,
   updateTask,
@@ -43,6 +45,10 @@ export const POST = formHandler(async (form) => {
 
     case "status":
       await setStatus(id, parseStatus(text(form, "status")), OWNER);
+      return;
+
+    case "priority":
+      await setPriority(id, parsePriority(text(form, "priority")), OWNER);
       return;
 
     case "assign": {
