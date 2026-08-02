@@ -18,6 +18,20 @@ export const PRIORITIES = ["high", "normal", "low"] as const;
 
 export type TaskNode = Node<Task>;
 
+/** Закрытая задача — сделанная или отменённая: работы по ней больше нет. */
+export const isClosed = (task: { status: TaskStatus }) =>
+  task.status === "done" || task.status === "cancelled";
+
+/**
+ * Убирает закрытые задачи из дерева. Закрытый родитель остаётся, если под ним
+ * ещё есть открытое, — иначе живые подзадачи исчезли бы вместе с ним.
+ */
+export const hideClosed = (nodes: TaskNode[]): TaskNode[] =>
+  nodes.flatMap((node) => {
+    const children = hideClosed(node.children);
+    return isClosed(node) && children.length === 0 ? [] : [{ ...node, children }];
+  });
+
 /** Статус из набора или ничего — набор фиксирован и не настраивается. */
 export const asStatus = (value: string | null | undefined): TaskStatus | null =>
   (STATUSES as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : null;

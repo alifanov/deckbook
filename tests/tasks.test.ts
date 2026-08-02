@@ -8,6 +8,7 @@ import {
   createTask,
   deleteTask,
   getTaskTree,
+  hideClosed,
   listOwnerTasks,
   listProjectTree,
   listTasks,
@@ -301,5 +302,30 @@ describe("статусы и назначение", () => {
     const updated = await updateTask(task.id, { title: "Стало", description: "детали" }, OWNER);
     expect(updated.title).toBe("Стало");
     expect(updated.description).toBe("детали");
+  });
+});
+
+describe("скрытие закрытых задач", () => {
+  it("убирает закрытые, но держит закрытого родителя с живой подзадачей", async () => {
+    const project = await makeProject();
+    const open = await createTask({ projectId: project.id, title: "Открытая" }, OWNER);
+    const doneLeaf = await createTask({ projectId: project.id, title: "Сделанная" }, OWNER);
+    const cancelled = await createTask({ projectId: project.id, title: "Отменённая" }, OWNER);
+    const epic = await createTask({ projectId: project.id, title: "Закрытый эпик" }, OWNER);
+    const alive = await createTask(
+      { projectId: project.id, parentId: epic.id, title: "Живая подзадача" },
+      OWNER,
+    );
+    const buried = await createTask(
+      { projectId: project.id, parentId: doneLeaf.id, title: "Тоже сделанная" },
+      OWNER,
+    );
+    for (const task of [doneLeaf, epic, buried]) await setStatus(task.id, "done", OWNER);
+    await setStatus(cancelled.id, "cancelled", OWNER);
+
+    const visible = hideClosed(await listProjectTree(project.id));
+
+    expect(visible.map((node) => node.id)).toEqual([open.id, epic.id]);
+    expect(visible[1].children.map((node) => node.id)).toEqual([alive.id]);
   });
 });
