@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { ConfirmButton } from "../../../../../confirm";
 import { getDocument, listDocumentTree, type DocumentNode } from "../../../../../domain/documents";
 import { getProjectBySlug } from "../../../../../domain/projects";
+import { Header } from "../../../../../header";
 import {
   Back,
   Banner,
-  Header,
   Icon,
   Markdown,
   moment,

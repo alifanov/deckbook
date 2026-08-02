@@ -154,32 +154,6 @@ export const Icon = ({ name, size = 14 }: { name: IconName; size?: number }) => 
   </svg>
 );
 
-export function Header({ children }: { children?: ReactNode }) {
-  return (
-    <header className="top">
-      <div className="inner">
-        <Link className="brand" href="/">
-          <Logo />
-          Deckbook
-        </Link>
-        {children}
-        <span className="spacer" />
-        <Link className="act" href="/my-tasks">
-          <Icon name="check" />
-          Мои задачи
-        </Link>
-        <form method="post" action="/api/session">
-          <input type="hidden" name="intent" value="logout" />
-          <button className="act" type="submit">
-            <Icon name="logout" />
-            Выйти
-          </button>
-        </form>
-      </div>
-    </header>
-  );
-}
-
 const NAV = [
   {
     at: "tasks",

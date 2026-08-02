@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { CopyField, CopySnippet } from "../../../../copy";
 import { getProjectBySlug } from "../../../../domain/projects";
 import { ISSUED_HEADER, listTokens } from "../../../../domain/tokens";
+import { Header } from "../../../../header";
 import {
   Back,
   Banner,
   Head,
-  Header,
   Icon,
   moment,
   ProjectNav,

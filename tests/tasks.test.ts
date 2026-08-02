@@ -4,6 +4,7 @@ import {
   assignTask,
   assignTaskToOwner,
   assignUnassigned,
+  countOwnerTasks,
   countUnassigned,
   createTask,
   deleteTask,
@@ -293,6 +294,8 @@ describe("статусы и назначение", () => {
     expect(mine.map((t) => t.id).sort()).toEqual([first.id, second.id].sort());
     expect(mine.map((t) => t.id)).not.toContain(agents.id);
     expect(mine.map((t) => t.project.name).sort()).toEqual(["A", "B"]);
+    // счётчик в хидере считает ровно то же самое
+    expect(await countOwnerTasks()).toBe(mine.length);
   });
 
   it("правит заголовок и описание", async () => {

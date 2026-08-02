@@ -15,13 +15,13 @@ import {
   type TaskNode,
 } from "../../../../../domain/tasks";
 import { listTokens } from "../../../../../domain/tokens";
+import { Header } from "../../../../../header";
 import {
   Back,
   Banner,
   Dot,
   dueDay,
   Head,
-  Header,
   Icon,
   Markdown,
   moment,

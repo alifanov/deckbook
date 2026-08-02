@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listDocumentTree, type DocumentNode } from "../../../../domain/documents";
 import { getProjectBySlug } from "../../../../domain/projects";
-import { Back, Banner, day, Head, Header, Icon, plural, ProjectNav } from "../../../../ui";
+import { Header } from "../../../../header";
+import { Back, Banner, day, Head, Icon, plural, ProjectNav } from "../../../../ui";
 
 export const dynamic = "force-dynamic";
 
