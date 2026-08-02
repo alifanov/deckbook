@@ -3,11 +3,7 @@ import type { DocumentNode } from "../../../../domain/documents";
 import { trail } from "../../../../domain/tree";
 import { Icon } from "../../../../ui";
 
-/**
- * Левая панель двухпанельного просмотра: папки раскрываются кликом и
- * закрываются повторным.
- * ponytail: нативный <details>, никакого клиентского состояния.
- */
+/** Ветка дерева: файл — ссылка, папка — нативный <details>, схлопывается по клику. */
 function Branch({
   node,
   slug,
@@ -52,6 +48,11 @@ function Branch({
   );
 }
 
+/**
+ * Левая панель двухпанельного просмотра: папки раскрываются кликом и
+ * закрываются повторным.
+ * ponytail: нативный <details>, никакого клиентского состояния.
+ */
 export function DocumentTree({
   tree,
   slug,
@@ -62,9 +63,7 @@ export function DocumentTree({
   activeId?: string;
 }) {
   // Раскрыты только папки над выбранным узлом — остальное ждёт клика.
-  const open = new Set(
-    activeId ? ((trail(tree, activeId) ?? []).map((node) => node.id) as string[]) : [],
-  );
+  const open = new Set((activeId ? (trail(tree, activeId) ?? []) : []).map((node) => node.id));
 
   return (
     <aside className="card tree">

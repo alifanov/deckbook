@@ -414,7 +414,9 @@ details.reveal.drop > .pop textarea {
   cursor: pointer;
   list-style: none;
 }
+.tree summary::marker,
 .tree summary::-webkit-details-marker {
+  content: "";
   display: none;
 }
 .tree .file:hover,
@@ -437,6 +439,7 @@ details.reveal.drop > .pop textarea {
 .tree .twist {
   display: inline-flex;
   color: var(--dim);
+  transition: transform 0.15s ease;
 }
 .tree details[open] > summary .twist {
   transform: rotate(90deg);
