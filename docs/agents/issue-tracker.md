@@ -1,5 +1,7 @@
 # Issue tracker: Local Markdown
 
+> Не для этого репозитория. Задачи и документы Deckbook живут в самом Deckbook (MCP `deckbook-deckbook`) — см. CLAUDE.md. Этот файл описывает только `.scratch/`-эффорты `/wayfinder`.
+
 Issues and specs (you may know a spec as a PRD) for this repo live as markdown files in `.scratch/`.
 
 ## Conventions
