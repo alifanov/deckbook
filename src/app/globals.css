@@ -386,6 +386,24 @@ details.reveal.drop > .pop textarea {
   margin-left: 4px;
 }
 
+/* Папка схлопывается нативным <details>: галочка поворачивается, содержимое прячется. */
+.list details.tree > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.list details.tree > summary::marker,
+.list details.tree > summary::-webkit-details-marker {
+  content: "";
+  display: none;
+}
+.list .twist {
+  display: inline-flex;
+  transition: transform 0.15s ease;
+}
+.list details.tree[open] > summary .twist {
+  transform: rotate(90deg);
+}
+
 /* Статус читается всей строкой, а не одной точкой: работа выступает вперёд,
    закрытое уходит в бумагу. */
 .list .item.in_progress > a,
