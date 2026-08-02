@@ -1,46 +1,81 @@
 import Link from "next/link";
 import type { DocumentNode } from "../../../../domain/documents";
-import { day, Icon } from "../../../../ui";
+import { trail } from "../../../../domain/tree";
+import { Icon } from "../../../../ui";
 
-/** Ветка дерева документов. Папка — нативный <details>: галочка её схлопывает без JS. */
-export function Branch({ node, slug }: { node: DocumentNode; slug: string }) {
-  const link = (
-    <Link
-      href={`/projects/${slug}/documents/${node.id}`}
-      className="grow"
-      style={node.isFolder ? { fontWeight: 600, fontSize: 16 } : undefined}
-    >
-      {node.name}
-    </Link>
-  );
+/** Ветка дерева: файл — ссылка, папка — нативный <details>, схлопывается по клику. */
+function Branch({
+  node,
+  slug,
+  activeId,
+  open,
+}: {
+  node: DocumentNode;
+  slug: string;
+  activeId?: string;
+  open: Set<string>;
+}) {
+  const href = `/projects/${slug}/documents/${node.id}`;
 
   if (!node.isFolder) {
     return (
-      <div className="item">
-        {link}
-        <span className="muted">
-          {node.updatedBy?.name ?? "владелец"} · {day(node.updatedAt)}
-        </span>
-      </div>
+      <Link className={node.id === activeId ? "file here" : "file"} href={href}>
+        <span className="grow">{node.name}</span>
+      </Link>
     );
   }
 
   return (
-    <details className="tree" open>
-      <summary className="item">
-        <span className="muted twist">
+    <details open={open.has(node.id)}>
+      <summary>
+        <span className="twist">
           <Icon name="right" />
         </span>
-        {link}
-        <span className="muted">{node.children.length}</span>
+        <span className="grow" style={{ fontWeight: 600 }}>
+          {node.name}
+        </span>
+        {/* счётчик заодно ведёт на страницу папки — там переименование и удаление */}
+        <Link className="muted" href={href} title="Страница папки">
+          {node.children.length}
+        </Link>
       </summary>
-      {node.children.length > 0 && (
-        <div className="kids">
-          {node.children.map((child) => (
-            <Branch key={child.id} node={child} slug={slug} />
-          ))}
-        </div>
-      )}
+      <div className="kids">
+        {node.children.map((child) => (
+          <Branch key={child.id} node={child} slug={slug} activeId={activeId} open={open} />
+        ))}
+      </div>
     </details>
+  );
+}
+
+/**
+ * Левая панель двухпанельного просмотра: папки раскрываются кликом и
+ * закрываются повторным.
+ * ponytail: нативный <details>, никакого клиентского состояния.
+ */
+export function DocumentTree({
+  tree,
+  slug,
+  activeId,
+}: {
+  tree: DocumentNode[];
+  slug: string;
+  activeId?: string;
+}) {
+  // Раскрыты только папки над выбранным узлом — остальное ждёт клика.
+  const open = new Set((activeId ? (trail(tree, activeId) ?? []) : []).map((node) => node.id));
+
+  return (
+    <aside className="card tree">
+      {tree.length === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Пока пусто.
+        </p>
+      ) : (
+        tree.map((node) => (
+          <Branch key={node.id} node={node} slug={slug} activeId={activeId} open={open} />
+        ))
+      )}
+    </aside>
   );
 }
