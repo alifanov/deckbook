@@ -32,6 +32,23 @@ export const hideClosed = (nodes: TaskNode[]): TaskNode[] =>
     return isClosed(node) && children.length === 0 ? [] : [{ ...node, children }];
   });
 
+/** Порядок статусов в дереве: работа сверху, закрытое — вниз. */
+const TREE_RANK: Record<TaskStatus, number> = {
+  in_progress: 0,
+  todo: 1,
+  done: 2,
+  cancelled: 3,
+};
+
+/**
+ * Раскладывает ветки по статусу на каждом уровне. Сортировка устойчивая, так что
+ * внутри одного статуса остаётся порядок выборки — по времени создания.
+ */
+export const sortByStatus = (nodes: TaskNode[]): TaskNode[] =>
+  [...nodes]
+    .sort((a, b) => TREE_RANK[a.status] - TREE_RANK[b.status])
+    .map((node) => ({ ...node, children: sortByStatus(node.children) }));
+
 /** Статус из набора или ничего — набор фиксирован и не настраивается. */
 export const asStatus = (value: string | null | undefined): TaskStatus | null =>
   (STATUSES as readonly string[]).includes(value ?? "") ? (value as TaskStatus) : null;
@@ -310,13 +327,13 @@ export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
 }
 
-/** Дерево задач проекта. */
+/** Дерево задач проекта: в работе сверху, закрытое — внизу. */
 export async function listProjectTree(projectId: string): Promise<TaskNode[]> {
   const tasks = await prisma.task.findMany({
     where: { projectId },
     orderBy: { createdAt: "asc" },
   });
-  return buildTree(tasks, null);
+  return sortByStatus(buildTree(tasks, null));
 }
 
 /**
