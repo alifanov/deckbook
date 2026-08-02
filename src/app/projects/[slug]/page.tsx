@@ -19,13 +19,13 @@ import {
 } from "../../../domain/tasks";
 import type { TaskStatus } from "../../../generated/prisma/client";
 import { listTokens } from "../../../domain/tokens";
+import { Header } from "../../../header";
 import {
   Back,
   Banner,
   Dot,
   dueDay,
   Head,
-  Header,
   Icon,
   plural,
   Prio,

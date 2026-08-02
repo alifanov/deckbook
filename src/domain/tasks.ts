@@ -352,6 +352,12 @@ export function listTasks(
   });
 }
 
+/** Незакрытое на владельце — ровно то, что показывают «Мои задачи». */
+const OWNER_OPEN = {
+  assignedToOwner: true,
+  status: { in: ["todo", "in_progress"] as TaskStatus[] },
+};
+
 /**
  * Задачи владельца — из всех проектов сразу: у владельца границы проекта нет.
  * Закрытое не показываем, ненаступившие сроки прячутся только от агента
@@ -359,7 +365,7 @@ export function listTasks(
  */
 export const listOwnerTasks = () =>
   prisma.task.findMany({
-    where: { assignedToOwner: true, status: { in: ["todo", "in_progress"] } },
+    where: OWNER_OPEN,
     include: { project: true },
     orderBy: [
       { dueAt: { sort: "asc", nulls: "last" } },
@@ -367,6 +373,9 @@ export const listOwnerTasks = () =>
       { createdAt: "asc" },
     ],
   });
+
+/** То же самое одним числом — для счётчика в хидере. */
+export const countOwnerTasks = () => prisma.task.count({ where: OWNER_OPEN });
 
 /** Сводка проекта по статусам. Нули в ней тоже есть — пустой статус это факт. */
 export async function countByStatus(projectId: string): Promise<Record<TaskStatus, number>> {

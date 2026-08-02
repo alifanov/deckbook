@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ConfirmButton } from "../confirm";
 import { listProjects } from "../domain/projects";
-import { Back, Banner, day, Header, Icon, plural, Reveal } from "../ui";
+import { Header } from "../header";
+import { Back, Banner, day, Icon, plural, Reveal } from "../ui";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { isOverdue, listOwnerTasks } from "../../domain/tasks";
-import { Dot, dueDay, Header, plural, Prio, statusLabel } from "../../ui";
+import { Header } from "../../header";
+import { Dot, dueDay, plural, Prio, statusLabel } from "../../ui";
 
 export const dynamic = "force-dynamic";
 
