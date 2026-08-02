@@ -50,6 +50,11 @@ export async function renameProject(id: string, name: string) {
   return prisma.project.update({ where: { id }, data: { name: title } });
 }
 
+/** Цель переписывается целиком; пустая строка снимает её вовсе. */
+export async function setProjectGoal(id: string, goal: string) {
+  return prisma.project.update({ where: { id }, data: { goal: goal.trim() } });
+}
+
 export async function deleteProject(id: string) {
   await prisma.project.delete({ where: { id } });
 }

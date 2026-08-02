@@ -36,6 +36,7 @@ export type McpContext = {
   projectId: string;
   projectName: string;
   projectSlug: string;
+  projectGoal: string;
   tokenId: string;
   tokenName: string;
   author: Author;
@@ -92,12 +93,16 @@ export const TOOLS: Tool[] = [
   {
     name: "project_info",
     description:
-      "Возвращает проект, внутри которого ты работаешь, и его агентов — тех, на кого можно " +
-      "назначать задачи. Других проектов для тебя не существует.",
+      "Возвращает проект, внутри которого ты работаешь, его цель и его агентов — тех, на кого " +
+      "можно назначать задачи. Других проектов для тебя не существует. " +
+      "Цель — то состояние, к которому проект должен прийти: сверяйся с ней, выбирая, за что взяться.",
     inputSchema: { type: "object", properties: {} },
     run: async (_args, ctx) => ({
       project: ctx.projectName,
       slug: ctx.projectSlug,
+      // ponytail: пустая цель приезжает словами, а не null — предписаний
+      // агенту при этом не даём, пусть решает сам (ADR-0007)
+      goal: ctx.projectGoal || "цель не задана",
       me: ctx.tokenName,
       agents: (await listAgents(ctx.projectId)).map((a) => a.name),
     }),

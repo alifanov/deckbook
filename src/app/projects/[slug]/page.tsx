@@ -23,6 +23,7 @@ import {
   plural,
   Prio,
   ProjectNav,
+  Reveal,
   statusLabel,
 } from "../../../ui";
 
@@ -119,9 +120,38 @@ export default async function ProjectTasksPage({
         <ProjectNav slug={slug} at="tasks" />
       </Header>
       <main>
-        <div className="bar" style={{ alignItems: "baseline", marginBottom: 22 }}>
+        <div className="bar" style={{ alignItems: "baseline", marginBottom: 10 }}>
           <h1 style={{ margin: 0 }}>{project.name}</h1>
           <span className="muted">{plural(all.length, "задача", "задачи", "задач")}</span>
+        </div>
+
+        {/* цель работает, только пока мозолит глаза — потому под заголовком,
+            а не на отдельной странице настроек */}
+        <div className="bar" style={{ alignItems: "baseline", gap: 10, marginBottom: 22 }}>
+          {project.goal ? (
+            <span style={{ whiteSpace: "pre-wrap" }}>{project.goal}</span>
+          ) : (
+            <span className="muted">Цель не задана</span>
+          )}
+          <span className="spacer" />
+          <Reveal label="Цель" drop wide>
+            <form method="post" action="/api/projects">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="goal" />
+              <input type="hidden" name="id" value={project.id} />
+              <textarea
+                name="goal"
+                defaultValue={project.goal}
+                placeholder="К чему проект должен прийти. Строкой на цель, важное — выше"
+              />
+              <div className="row" style={{ marginTop: 10 }}>
+                <button type="submit">
+                  <Icon name="check" />
+                  Сохранить
+                </button>
+              </div>
+            </form>
+          </Reveal>
         </div>
         <Banner error={error} />
 

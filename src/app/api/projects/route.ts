@@ -1,4 +1,9 @@
-import { createProject, deleteProject, renameProject } from "../../../domain/projects";
+import {
+  createProject,
+  deleteProject,
+  renameProject,
+  setProjectGoal,
+} from "../../../domain/projects";
 import { formHandler, text } from "../../../http";
 
 export const POST = formHandler(async (form) => {
@@ -9,6 +14,9 @@ export const POST = formHandler(async (form) => {
     }
     case "rename":
       await renameProject(text(form, "id"), text(form, "name"));
+      return;
+    case "goal":
+      await setProjectGoal(text(form, "id"), text(form, "goal"));
       return;
     case "delete":
       await deleteProject(text(form, "id"));

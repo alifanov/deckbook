@@ -21,6 +21,10 @@ model Project {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  /// цель: состояние, к которому проект должен прийти. Свободный текст,
+  /// строки — по убыванию важности. Пишет только владелец, агент читает
+  /// её в project_info (ADR-0007).
+  goal      String   @default("")
   createdAt DateTime @default(now())
 
   tokens    Token[]

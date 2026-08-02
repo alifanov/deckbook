@@ -39,6 +39,7 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
     projectId: auth.project.id,
     projectName: auth.project.name,
     projectSlug: auth.project.slug,
+    projectGoal: auth.project.goal,
     tokenId: auth.token.id,
     tokenName: auth.token.name,
     author: agent(auth.token.id),
@@ -58,7 +59,10 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
         instructions:
           `Ты работаешь в проекте «${ctx.projectName}». Других проектов не существует: ` +
           "ни один инструмент не принимает проект параметром. Задачи образуют дерево любой глубины, " +
-          "документы — отдельное дерево папок. Начинай с my_tasks.",
+          "документы — отдельное дерево папок. " +
+          // сама цель здесь не лежит: инструкции считаются один раз, на коннекте,
+          // и к вечеру устарели бы. В инструкции — маршрут, цель — в project_info
+          "Начинай с project_info: там цель проекта, ради которой ты здесь. Дальше — my_tasks.",
       });
 
     case "ping":

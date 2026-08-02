@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { OWNER } from "../src/domain/author";
 import { prisma } from "../src/db";
+import { setProjectGoal } from "../src/domain/projects";
 import { createTask, setRecurrence } from "../src/domain/tasks";
 import { handleMcpRequest } from "../src/mcp/server";
 import { makeProject, makeToken } from "./helpers";
@@ -66,6 +67,13 @@ describe("агент работает через MCP", () => {
     await expect(tool("create_task", { title: "Ничья", assignee: "Кто-то" })).rejects.toThrow(
       /Ночной агент/,
     );
+  });
+
+  it("отдаёт цель проекта, а пока её нет — говорит об этом словами", async () => {
+    expect((await tool("project_info")).goal).toBe("цель не задана");
+
+    await setProjectGoal(projectId, "  300к MRR к декабрю\n10к визитов в месяц  ");
+    expect((await tool("project_info")).goal).toBe("300к MRR к декабрю\n10к визитов в месяц");
   });
 
   it("передаёт задачу другому агенту и снимает назначение", async () => {
