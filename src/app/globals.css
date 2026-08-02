@@ -450,6 +450,60 @@ details.reveal.drop > .pop textarea {
   color: #b3aa9a;
 }
 
+/* ── сводка ────────────────────────────────────────────────────────── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tile {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tile .n {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.tile.in_progress .n {
+  color: var(--live);
+}
+.tile.done .n,
+.tile.cancelled .n {
+  color: var(--dim);
+}
+
+.flow {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 12px;
+}
+.flow text {
+  font-size: 7px;
+  fill: var(--dim);
+}
+.flow .created {
+  fill: var(--dot);
+}
+.flow .closed {
+  fill: var(--dot-done);
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
 /* ── лента ─────────────────────────────────────────────────────────── */
 
 .feed {
