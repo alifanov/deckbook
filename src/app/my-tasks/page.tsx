@@ -23,7 +23,7 @@ export default async function MyTasksPage() {
         ) : (
           <div className="card tight list">
             {tasks.map((task) => (
-              <div className="item" key={task.id}>
+              <div className={`item ${task.status}`} key={task.id}>
                 <Dot status={task.status} />
                 <Link
                   href={`/projects/${task.project.slug}/tasks/${task.id}`}
