@@ -123,17 +123,4 @@ describe("срок задачи", () => {
     expect(titles(await listTasks(project.id))).toEqual([]);
   });
 
-  it("шаблон не переносит срок в развёрнутую задачу", async () => {
-    const { applyTemplate, markAsTemplate } = await import("../src/domain/templates");
-    const project = await makeProject();
-    const source = await createTask(
-      { projectId: project.id, title: "Починка бага", dueAt: parseDueDate("2030-01-01") },
-      OWNER,
-    );
-    await markAsTemplate(source.id, { global: false, projectId: project.id });
-
-    const applied = await applyTemplate(source.id, { projectId: project.id }, OWNER);
-
-    expect(applied.dueAt).toBeNull();
-  });
 });

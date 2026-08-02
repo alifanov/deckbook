@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { OWNER } from "../src/domain/author";
 import { prisma } from "../src/db";
 import { createTask, setRecurrence } from "../src/domain/tasks";
-import { markAsTemplate } from "../src/domain/templates";
 import { handleMcpRequest } from "../src/mcp/server";
 import { makeProject, makeToken } from "./helpers";
 
@@ -168,26 +167,6 @@ describe("агент работает через MCP", () => {
     expect(feed).toEqual([
       expect.objectContaining({ kind: "human", author: "Ночной агент", body: "билд починен" }),
     ]);
-  });
-
-  it("разворачивает шаблон", async () => {
-    const template = await createTask({ projectId, title: "Исправление бага" }, OWNER);
-    await createTask({ projectId, parentId: template.id, title: "Тесты" }, OWNER);
-    await markAsTemplate(template.id, { global: false });
-
-    const templates = await tool("list_templates");
-    expect(templates).toEqual([{ id: template.id, title: "Исправление бага" }]);
-
-    const applied = await tool("apply_template", { templateId: template.id });
-    expect(applied.subtasks.map((t: { title: string }) => t.title)).toEqual(["Тесты"]);
-    expect(applied.id).not.toBe(template.id);
-  });
-
-  it("не видит шаблоны среди задач", async () => {
-    const template = await createTask({ projectId, title: "Шаблон" }, OWNER);
-    await markAsTemplate(template.id, { global: false });
-
-    await expect(tool("read_task", { taskId: template.id })).rejects.toThrow(/нет в этом проекте/);
   });
 
   it("ведёт дерево документов: папка, документ, запись, перемещение", async () => {

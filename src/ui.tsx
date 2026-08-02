@@ -191,17 +191,6 @@ const NAV = [
     ),
   },
   {
-    at: "templates",
-    href: "/templates",
-    label: "Шаблоны",
-    glyph: (
-      <>
-        <rect x="5.2" y="2" width="8.8" height="8.8" rx="2" />
-        <path d="M10.4 13.4a2 2 0 0 1-2 1.6H4a2 2 0 0 1-2-2V6.6" />
-      </>
-    ),
-  },
-  {
     at: "tokens",
     href: "/tokens",
     label: "Токены",

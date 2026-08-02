@@ -26,7 +26,6 @@ import {
   setStatus,
   type TaskNode,
 } from "../domain/tasks";
-import { applyTemplate, listTemplates } from "../domain/templates";
 import { listAgents, resolveAgent } from "../domain/tokens";
 
 /** Проект и агент берутся из адреса и токена — инструменту их не передают. */
@@ -98,7 +97,7 @@ export const TOOLS: Tool[] = [
   {
     name: "my_tasks",
     description:
-      "Задачи проекта, назначенные на тебя. Начинай работу с этого списка. Шаблоны сюда не попадают. " +
+      "Задачи проекта, назначенные на тебя. Начинай работу с этого списка. " +
       "Задачи со сроком в будущем в список не входят — их время ещё не пришло, браться за них рано. " +
       "Сначала идут просроченные, потом сегодняшние, потом бессрочные. " +
       "includeFuture покажет и будущие — бери его, только если тебя спросили про планы, а не про работу.",
@@ -270,38 +269,6 @@ export const TOOLS: Tool[] = [
       const assignee = args.assignee ? await resolveAgent(ctx.projectId, args.assignee) : null;
       const task = await assignTask(args.taskId, assignee?.id ?? null, ctx.author);
       return { id: task.id, title: task.title, assignee: assignee?.name ?? null };
-    },
-  },
-  {
-    name: "list_templates",
-    description: "Заготовки деревьев задач, доступные проекту. Разворачивать их умеет apply_template.",
-    inputSchema: { type: "object", properties: {} },
-    run: async (_args, ctx) => {
-      const templates = await listTemplates(ctx.projectId);
-      return templates.map((t) => ({ id: t.id, title: t.title }));
-    },
-  },
-  {
-    name: "apply_template",
-    description:
-      "Разворачивает шаблон в новое дерево задач этого проекта со статусом todo. " +
-      "Сам шаблон не меняется. С parentTaskId дерево разворачивается внутри указанной ветки.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        templateId: str("идентификатор шаблона из list_templates"),
-        parentTaskId: str("куда развернуть, необязательно"),
-      },
-      required: ["templateId"],
-    },
-    run: async (args, ctx) => {
-      if (args.parentTaskId) await requireOwnTask(args.parentTaskId, ctx);
-      const root = await applyTemplate(
-        args.templateId,
-        { projectId: ctx.projectId, parentId: args.parentTaskId ?? null },
-        ctx.author,
-      );
-      return renderTask(await getTaskTree(root.id));
     },
   },
   {

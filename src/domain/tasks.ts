@@ -46,20 +46,17 @@ async function requireTask(id: string) {
   return task;
 }
 
-/**
- * Задача существует и лежит в этом проекте — граница агента (ADR-0003).
- * Шаблон настоящей задачей не считается: в обычных выборках его нет.
- */
+/** Задача существует и лежит в этом проекте — граница агента (ADR-0003). */
 export async function requireTaskInProject(id: string, projectId: string) {
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task || task.projectId !== projectId || task.isTemplate) {
+  if (!task || task.projectId !== projectId) {
     fail(`Задачи ${id} нет в этом проекте — доступны только задачи текущего проекта`);
   }
   return task;
 }
 
 /** Родитель и ребёнок всегда в одном проекте (ADR-0003). */
-async function requireParentInProject(parentId: string, projectId: string | null) {
+async function requireParentInProject(parentId: string, projectId: string) {
   const parent = await requireTask(parentId);
   if (parent.projectId !== projectId) {
     fail("Родитель и подзадача должны принадлежать одному проекту");
@@ -69,11 +66,10 @@ async function requireParentInProject(parentId: string, projectId: string | null
 
 export async function createTask(
   input: {
-    projectId: string | null;
+    projectId: string;
     parentId?: string | null;
     title: string;
     description?: string;
-    isTemplate?: boolean;
     dueAt?: Date | null;
     assigneeTokenId?: string | null;
   },
@@ -82,14 +78,7 @@ export async function createTask(
   const title = input.title.trim();
   if (!title) fail("У задачи должен быть заголовок");
 
-  let isTemplate = input.isTemplate ?? false;
-  if (input.parentId) {
-    const parent = await requireParentInProject(input.parentId, input.projectId);
-    // подзадача шаблона — тоже шаблон, иначе она всплывёт в обычных выборках
-    isTemplate = parent.isTemplate;
-  } else if (input.projectId === null && !isTemplate) {
-    fail("Задача вне проекта возможна только как глобальный шаблон");
-  }
+  if (input.parentId) await requireParentInProject(input.parentId, input.projectId);
 
   return prisma.task.create({
     data: {
@@ -97,7 +86,6 @@ export async function createTask(
       parentId: input.parentId ?? null,
       title,
       description: input.description?.trim() ?? "",
-      isTemplate,
       dueAt: input.dueAt ?? null,
       assigneeTokenId: input.assigneeTokenId ?? null,
       createdByTokenId: author.tokenId,
@@ -214,7 +202,7 @@ export async function assignTask(id: string, tokenId: string | null, author: Aut
 }
 
 export const countUnassigned = (projectId: string) =>
-  prisma.task.count({ where: { projectId, isTemplate: false, assigneeTokenId: null } });
+  prisma.task.count({ where: { projectId, assigneeTokenId: null } });
 
 /**
  * Раздаёт агенту все ничьи задачи проекта разом. Ничья задача не попадает
@@ -222,7 +210,7 @@ export const countUnassigned = (projectId: string) =>
  */
 export async function assignUnassigned(projectId: string, tokenId: string, author: Author) {
   const orphans = await prisma.task.findMany({
-    where: { projectId, isTemplate: false, assigneeTokenId: null },
+    where: { projectId, assigneeTokenId: null },
     select: { id: true },
   });
   // ponytail: по одной, ради записи в ленту каждой задачи; пачками, если станет тысячи
@@ -261,10 +249,10 @@ export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
 }
 
-/** Дерево задач проекта. Шаблоны в обычную выборку не попадают (ADR-0001). */
+/** Дерево задач проекта. */
 export async function listProjectTree(projectId: string): Promise<TaskNode[]> {
   const tasks = await prisma.task.findMany({
-    where: { projectId, isTemplate: false },
+    where: { projectId },
     orderBy: { createdAt: "asc" },
   });
   return buildTree(tasks, null);
@@ -288,7 +276,6 @@ export function listTasks(
   return prisma.task.findMany({
     where: {
       projectId,
-      isTemplate: false,
       ...match,
       ...(includeFuture ? {} : { OR: [{ dueAt: null }, { dueAt: { lte: today() } }] }),
     },
@@ -301,9 +288,7 @@ export function listTasks(
 export async function getTaskTree(id: string): Promise<TaskNode> {
   const task = await requireTask(id);
   const all = await prisma.task.findMany({
-    where: task.projectId
-      ? { projectId: task.projectId }
-      : { projectId: null, isTemplate: true },
+    where: { projectId: task.projectId },
     orderBy: { createdAt: "asc" },
   });
   const children = buildTree(all, id);

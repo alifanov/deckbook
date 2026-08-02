@@ -31,7 +31,7 @@ export function listProjects() {
     include: {
       _count: {
         select: {
-          tasks: { where: { isTemplate: false } },
+          tasks: true,
           tokens: { where: { revokedAt: null } },
         },
       },

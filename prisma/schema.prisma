@@ -53,13 +53,11 @@ enum TaskStatus {
 
 model Task {
   id          String     @id @default(cuid())
-  /// null только у глобального шаблона (ADR-0001)
-  projectId   String?
+  projectId   String
   parentId    String?
   title       String
   description String     @default("")
   status      TaskStatus @default(todo)
-  isTemplate  Boolean    @default(false)
   /// интервал повторения в днях; null у обычной задачи
   recurrence  Int?
   /// срок: день, в который задачу надо сделать. До срока задача не попадает
@@ -74,14 +72,14 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parent    Task?    @relation("subtasks", fields: [parentId], references: [id], onDelete: Cascade)
   children  Task[]   @relation("subtasks")
   assignee  Token?   @relation("assignee", fields: [assigneeTokenId], references: [id], onDelete: SetNull)
   createdBy Token?   @relation("taskCreator", fields: [createdByTokenId], references: [id], onDelete: SetNull)
   comments  Comment[]
 
-  @@index([projectId, isTemplate])
+  @@index([projectId])
   @@index([parentId])
 }
 

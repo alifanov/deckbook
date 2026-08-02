@@ -13,7 +13,6 @@ import {
   setStatus,
   updateTask,
 } from "../../../domain/tasks";
-import { applyTemplate, markAsTemplate } from "../../../domain/templates";
 import { formHandler, optional, text } from "../../../http";
 
 export const POST = formHandler(async (form) => {
@@ -70,21 +69,6 @@ export const POST = formHandler(async (form) => {
 
     case "comment":
       await addComment(id, text(form, "body"), OWNER);
-      return;
-
-    case "make-template":
-      await markAsTemplate(id, {
-        global: text(form, "scope") === "global",
-        projectId: optional(form, "projectId") ?? undefined,
-      });
-      return;
-
-    case "apply-template":
-      await applyTemplate(
-        text(form, "templateId"),
-        { projectId: text(form, "projectId"), parentId: optional(form, "parentId") },
-        OWNER,
-      );
       return;
 
     case "delete": {

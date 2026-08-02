@@ -68,9 +68,7 @@ export default async function TaskPage({
 
   const project = await getProjectBySlug(slug);
   const task = await getTask(id);
-  // глобальный шаблон живёт вне проектов, но правится из любого (ADR-0001)
-  const reachable = task && (task.projectId === project?.id || (task.isTemplate && !task.projectId));
-  if (!project || !task || !reachable) notFound();
+  if (!project || !task || task.projectId !== project.id) notFound();
 
   const [tree, feed, tokens, candidates, parent] = await Promise.all([
     getTaskTree(id),
@@ -317,16 +315,6 @@ export default async function TaskPage({
         </div>
 
         <div className="bar" style={{ gap: 20, marginTop: 26 }}>
-          <form className="inline" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="make-template" />
-            <input type="hidden" name="id" value={id} />
-            <input type="hidden" name="scope" value="project" />
-            <button className="act" type="submit" disabled={task.parentId !== null}>
-              <Icon name="layers" />
-              Сделать шаблоном проекта
-            </button>
-          </form>
           <span className="spacer" />
           <form className="inline" method="post" action="/api/tasks">
             <Back path={path} />
