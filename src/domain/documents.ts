@@ -2,9 +2,10 @@ import { prisma } from "../db";
 import type { Author } from "./author";
 import { fail } from "./errors";
 import { buildTree, type Node } from "./tree";
-import type { Document } from "../generated/prisma/client";
+import type { Document, Token } from "../generated/prisma/client";
 
-export type DocumentNode = Node<Document>;
+/** В дереве видно, кто трогал документ последним — человек или агент. */
+export type DocumentNode = Node<Document & { updatedBy: Token | null }>;
 
 async function requireNode(id: string) {
   const node = await prisma.document.findUnique({ where: { id } });
@@ -115,6 +116,7 @@ export function getDocument(id: string) {
 export async function listDocumentTree(projectId: string): Promise<DocumentNode[]> {
   const nodes = await prisma.document.findMany({
     where: { projectId },
+    include: { updatedBy: true },
     orderBy: [{ isFolder: "desc" }, { name: "asc" }],
   });
   return buildTree(nodes, null);

@@ -24,8 +24,19 @@ export async function createProject(name: string) {
   }
 }
 
+/** Список проектов вместе с тем, что на карточке проекта и так видно. */
 export function listProjects() {
-  return prisma.project.findMany({ orderBy: { createdAt: "asc" } });
+  return prisma.project.findMany({
+    orderBy: { createdAt: "asc" },
+    include: {
+      _count: {
+        select: {
+          tasks: { where: { isTemplate: false } },
+          tokens: { where: { revokedAt: null } },
+        },
+      },
+    },
+  });
 }
 
 export function getProjectBySlug(slug: string) {

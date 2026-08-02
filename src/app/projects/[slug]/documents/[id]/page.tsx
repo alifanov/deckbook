@@ -2,13 +2,17 @@ import MarkdownIt from "markdown-it";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmButton } from "../../../../../confirm";
-import {
-  getDocument,
-  listDocumentTree,
-  type DocumentNode,
-} from "../../../../../domain/documents";
+import { getDocument, listDocumentTree, type DocumentNode } from "../../../../../domain/documents";
 import { getProjectBySlug } from "../../../../../domain/projects";
-import { Back, Banner, Header, ProjectNav, when } from "../../../../../ui";
+import {
+  Back,
+  Banner,
+  Header,
+  Icon,
+  moment,
+  ProjectNav,
+  Reveal,
+} from "../../../../../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +26,16 @@ function folders(nodes: DocumentNode[], depth = 0): { id: string; label: string 
       { id: n.id, label: `${"— ".repeat(depth)}${n.name}` },
       ...folders(n.children, depth + 1),
     ]);
+}
+
+/** Цепочка папок до документа — из уже загруженного дерева, без лишних запросов. */
+function trail(nodes: DocumentNode[], id: string): DocumentNode[] | null {
+  for (const node of nodes) {
+    if (node.id === id) return [];
+    const inside = trail(node.children, id);
+    if (inside) return [node, ...inside];
+  }
+  return null;
 }
 
 export default async function DocumentPage({
@@ -40,93 +54,145 @@ export default async function DocumentPage({
 
   const tree = await listDocumentTree(project.id);
   const path = `/projects/${slug}/documents/${id}`;
+  const editing = Boolean(edit) && !document.isFolder;
 
   return (
     <>
       <Header>
-        <ProjectNav slug={slug} />
+        <ProjectNav slug={slug} at="documents" />
       </Header>
       <main>
-        <p className="muted">
-          <Link href={`/projects/${slug}/documents`}>← Документы</Link>
-        </p>
-        <h1>{document.name}</h1>
-        <Banner error={error} />
-        <p className="muted">
-          Последним менял: {document.updatedBy ? `агент ${document.updatedBy.name}` : "владелец"} ·{" "}
-          {when(document.updatedAt)}
+        <p className="crumbs">
+          <Link href={`/projects/${slug}`}>{project.name}</Link>
+          {" / "}
+          <Link href={`/projects/${slug}/documents`}>Документы</Link>
+          {(trail(tree, id) ?? []).map((node) => (
+            <span key={node.id}>
+              {" / "}
+              <Link href={`/projects/${slug}/documents/${node.id}`}>{node.name}</Link>
+            </span>
+          ))}
         </p>
 
-        {document.isFolder ? (
-          <p className="muted">
-            Папка. Её содержимое видно в{" "}
-            <Link href={`/projects/${slug}/documents`}>дереве документов</Link>.
-          </p>
-        ) : edit ? (
-          <form method="post" action="/api/documents">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="write" />
-            <input type="hidden" name="id" value={id} />
-            <textarea name="content" defaultValue={document.content} style={{ minHeight: 320 }} />
-            <div className="row">
-              <button type="submit">Сохранить</button>
-              <Link href={path}>отменить</Link>
-              <span className="muted">запись затирает предыдущее содержимое безвозвратно</span>
+        {editing ? (
+          <>
+            <h1 style={{ marginBottom: 10 }}>{document.name}</h1>
+            <p className="muted" style={{ margin: "0 0 22px" }}>
+              Правка · запись затирает предыдущее содержимое безвозвратно
+            </p>
+            <Banner error={error} />
+
+            <div className="card" style={{ padding: "20px 24px" }}>
+              <form method="post" action="/api/documents">
+                <Back path={path} />
+                <input type="hidden" name="intent" value="write" />
+                <input type="hidden" name="id" value={id} />
+                <textarea name="content" defaultValue={document.content} />
+                <div className="bar" style={{ gap: 16, marginTop: 16 }}>
+                  <button type="submit">
+                    <Icon name="check" />
+                    Сохранить
+                  </button>
+                  <Link className="act" href={path}>
+                    <Icon name="x" />
+                    Отмена
+                  </Link>
+                  <span className="spacer" />
+                  <span className="muted">markdown · предпросмотр после сохранения</span>
+                </div>
+              </form>
             </div>
-          </form>
+          </>
         ) : (
           <>
-            <div className="row">
-              <Link href={`${path}?edit=1`}>Редактировать</Link>
+            <div className="bar" style={{ alignItems: "baseline", marginBottom: 10 }}>
+              <h1 style={{ margin: 0 }}>{document.name}</h1>
+              <span className="spacer" />
+              {!document.isFolder && (
+                <Link className="act go" href={`${path}?edit=1`}>
+                  <Icon name="pencil" />
+                  Редактировать
+                </Link>
+              )}
             </div>
-            <div
-              className="markdown"
-              dangerouslySetInnerHTML={{ __html: markdown.render(document.content) }}
-            />
+            <p className="muted" style={{ margin: "0 0 26px" }}>
+              Последним менял{" "}
+              {document.updatedBy ? `агент ${document.updatedBy.name}` : "владелец"} ·{" "}
+              {moment(document.updatedAt)}
+            </p>
+            <Banner error={error} />
+
+            {document.isFolder ? (
+              <p className="muted">
+                Папка. Её содержимое видно в{" "}
+                <Link href={`/projects/${slug}/documents`}>дереве документов</Link>.
+              </p>
+            ) : document.content.trim() === "" ? (
+              <p className="muted">Документ пуст.</p>
+            ) : (
+              <div
+                className="markdown"
+                dangerouslySetInnerHTML={{ __html: markdown.render(document.content) }}
+              />
+            )}
           </>
         )}
 
-        <h2>Название и место</h2>
-        <form className="row" method="post" action="/api/documents">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="rename" />
-          <input type="hidden" name="id" value={id} />
-          <input type="text" name="name" defaultValue={document.name} required />
-          <button type="submit">Переименовать</button>
-        </form>
+        <div className="bar" style={{ gap: 20, marginTop: 22 }}>
+          <Reveal label="Переименовать" icon="pencil" drop>
+            <form className="row" method="post" action="/api/documents">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="rename" />
+              <input type="hidden" name="id" value={id} />
+              <input type="text" name="name" defaultValue={document.name} required />
+              <button type="submit">
+                <Icon name="check" />
+                Готово
+              </button>
+            </form>
+          </Reveal>
 
-        <form className="row" method="post" action="/api/documents">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="move" />
-          <input type="hidden" name="id" value={id} />
-          <select name="parentId" defaultValue={document.parentId ?? ""}>
-            <option value="">в корень</option>
-            {folders(tree)
-              .filter((folder) => folder.id !== id)
-              .map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.label}
-                </option>
-              ))}
-          </select>
-          <button type="submit">Переместить</button>
-        </form>
+          <Reveal label="Переместить" icon="move" drop>
+            <form className="row" method="post" action="/api/documents">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="move" />
+              <input type="hidden" name="id" value={id} />
+              <select name="parentId" defaultValue={document.parentId ?? ""}>
+                <option value="">в корень</option>
+                {folders(tree)
+                  .filter((folder) => folder.id !== id)
+                  .map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.label}
+                    </option>
+                  ))}
+              </select>
+              <button type="submit">
+                <Icon name="move" />
+                Переместить
+              </button>
+            </form>
+          </Reveal>
 
-        <form className="row" method="post" action="/api/documents">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="delete" />
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="after" value={`/projects/${slug}/documents`} />
-          <ConfirmButton
-            message={
-              document.isFolder
-                ? "Удалить папку вместе со всем содержимым?"
-                : "Удалить документ? Восстановить его будет неоткуда."
-            }
-          >
-            Удалить
-          </ConfirmButton>
-        </form>
+          <span className="spacer" />
+
+          <form className="inline" method="post" action="/api/documents">
+            <Back path={path} />
+            <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="after" value={`/projects/${slug}/documents`} />
+            <ConfirmButton
+              message={
+                document.isFolder
+                  ? "Удалить папку вместе со всем содержимым?"
+                  : "Удалить документ? Восстановить его будет неоткуда."
+              }
+            >
+              <Icon name="trash" />
+              Удалить {document.isFolder ? "папку" : "документ"}
+            </ConfirmButton>
+          </form>
+        </div>
       </main>
     </>
   );

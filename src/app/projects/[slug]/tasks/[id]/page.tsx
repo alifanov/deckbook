@@ -13,20 +13,47 @@ import {
   type TaskNode,
 } from "../../../../../domain/tasks";
 import { listTokens } from "../../../../../domain/tokens";
-import { Back, Banner, Header, ProjectNav, when } from "../../../../../ui";
+import {
+  Back,
+  Banner,
+  Dot,
+  dueDay,
+  Head,
+  Header,
+  Icon,
+  moment,
+  ProjectNav,
+  Reveal,
+  statusLabel,
+} from "../../../../../ui";
 
 export const dynamic = "force-dynamic";
 
 const Subtree = ({ nodes, slug }: { nodes: TaskNode[]; slug: string }) => (
-  <ul className="tree">
+  <>
     {nodes.map((node) => (
-      <li key={node.id}>
-        <Link href={`/projects/${slug}/tasks/${node.id}`}>{node.title}</Link>{" "}
-        <span className={`status ${node.status}`}>{node.status}</span>
-        {node.children.length > 0 && <Subtree nodes={node.children} slug={slug} />}
-      </li>
+      <div key={node.id}>
+        <div className="item">
+          <Dot status={node.status} />
+          <Link
+            href={`/projects/${slug}/tasks/${node.id}`}
+            className={node.status === "cancelled" ? "grow off" : "grow"}
+            style={{ fontSize: 16 }}
+          >
+            {node.title}
+          </Link>
+          <span className={node.status === "cancelled" ? "muted off" : "muted"}>
+            {statusLabel(node.status)}
+          </span>
+        </div>
+        {node.children.length > 0 && (
+          <div className="kids">
+            <Subtree nodes={node.children} slug={slug} />
+          </div>
+        )}
+      </div>
     ))}
-  </ul>
+  </>
 );
 
 export default async function TaskPage({
@@ -45,175 +72,269 @@ export default async function TaskPage({
   const reachable = task && (task.projectId === project?.id || (task.isTemplate && !task.projectId));
   if (!project || !task || !reachable) notFound();
 
-  const [tree, feed, tokens, candidates] = await Promise.all([
+  const [tree, feed, tokens, candidates, parent] = await Promise.all([
     getTaskTree(id),
     listComments(id),
     listTokens(project.id),
     // владелец видит всё: срок прячет задачи только от агента (ADR-0004)
     listTasks(project.id, { includeFuture: true }),
+    task.parentId ? getTask(task.parentId) : null,
   ]);
   const path = `/projects/${slug}/tasks/${id}`;
 
   return (
     <>
       <Header>
-        <ProjectNav slug={slug} />
+        <ProjectNav slug={slug} at="tasks" />
       </Header>
       <main>
-        <p className="muted">
-          <Link href={`/projects/${slug}`}>← {project.name}</Link>
+        <p className="crumbs">
+          <Link href={`/projects/${slug}`}>{project.name}</Link>
+          {parent && (
+            <>
+              {" / "}
+              <Link href={`/projects/${slug}/tasks/${parent.id}`}>{parent.title}</Link>
+            </>
+          )}
         </p>
-        <h1>{task.title}</h1>
+        <h1 style={{ maxWidth: "24ch", marginBottom: 18 }}>{task.title}</h1>
         <Banner error={error} />
 
-        <p className="muted">
-          Создал: {task.createdBy ? `агент ${task.createdBy.name}` : "владелец"} ·{" "}
-          {when(task.createdAt)}
-          {task.recurrence !== null && ` · последнее закрытие: ${when(task.lastClosedAt)}`}
-          {task.dueAt && ` · срок: ${asDay(task.dueAt)}`}
-          {isOverdue(task) && <strong className="status cancelled"> просрочено</strong>}
-        </p>
+        <div className="bar" style={{ gap: 22, marginBottom: 30, fontSize: 14 }}>
+          <span className="bar" style={{ gap: 8 }}>
+            <Dot status={task.status} />
+            {statusLabel(task.status)}
+          </span>
+          <span className="muted">{task.assignee?.name ?? "ничья"}</span>
+          {task.dueAt && (
+            <span className={isOverdue(task) ? "bad" : "muted"}>
+              {isOverdue(task) ? "просрочена · " : "срок "}
+              {dueDay(task.dueAt)}
+            </span>
+          )}
+          {task.recurrence !== null && (
+            <span className="muted">повтор {task.recurrence} дн.</span>
+          )}
+          <span className="spacer" />
 
-        <div className="card">
-          <form className="row" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="status" />
-            <input type="hidden" name="id" value={id} />
-            <select name="status" defaultValue={task.status}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <button type="submit">Сменить статус</button>
-          </form>
-
-          <form className="row" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="assign" />
-            <input type="hidden" name="id" value={id} />
-            <select name="tokenId" defaultValue={task.assigneeTokenId ?? ""}>
-              <option value="">не назначена</option>
-              {tokens.map((token) => (
-                <option key={token.id} value={token.id}>
-                  {token.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit">Назначить</button>
-          </form>
-
-          <form className="row" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="move" />
-            <input type="hidden" name="id" value={id} />
-            <select name="parentId" defaultValue={task.parentId ?? ""}>
-              <option value="">корень проекта</option>
-              {candidates
-                .filter((c) => c.id !== id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
+          <Reveal label="Изменить" icon="pencil" tone="go" drop wide>
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="status" />
+              <input type="hidden" name="id" value={id} />
+              <select name="status" defaultValue={task.status}>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {statusLabel(s)}
                   </option>
                 ))}
-            </select>
-            <button type="submit">Перенести</button>
-          </form>
+              </select>
+              <button type="submit">
+                <Icon name="check" />
+                Статус
+              </button>
+            </form>
 
-          <form className="row" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="recurrence" />
-            <input type="hidden" name="id" value={id} />
-            <input
-              type="number"
-              name="days"
-              min={1}
-              placeholder="дней"
-              defaultValue={task.recurrence ?? ""}
-              style={{ width: 110 }}
-            />
-            <button type="submit">Повторять</button>
-            <span className="muted">пусто — снять повторение</span>
-          </form>
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="assign" />
+              <input type="hidden" name="id" value={id} />
+              <select name="tokenId" defaultValue={task.assigneeTokenId ?? ""}>
+                <option value="">не назначена</option>
+                {tokens.map((token) => (
+                  <option key={token.id} value={token.id}>
+                    {token.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit">
+                <Icon name="check" />
+                Исполнитель
+              </button>
+            </form>
 
-          <form className="row" method="post" action="/api/tasks">
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="move" />
+              <input type="hidden" name="id" value={id} />
+              <select name="parentId" defaultValue={task.parentId ?? ""}>
+                <option value="">корень проекта</option>
+                {candidates
+                  .filter((c) => c.id !== id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      внутрь: {c.title}
+                    </option>
+                  ))}
+              </select>
+              <button type="submit">
+                <Icon name="move" />
+                Перенести
+              </button>
+            </form>
+
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="due" />
+              <input type="hidden" name="id" value={id} />
+              <input
+                type="date"
+                name="dueAt"
+                defaultValue={task.dueAt ? asDay(task.dueAt) : ""}
+              />
+              <button type="submit">
+                <Icon name="calendar" />
+                Срок
+              </button>
+              <span className="muted">пусто — снять</span>
+            </form>
+
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="recurrence" />
+              <input type="hidden" name="id" value={id} />
+              <input
+                type="number"
+                name="days"
+                min={1}
+                placeholder="дней"
+                defaultValue={task.recurrence ?? ""}
+                style={{ width: 110 }}
+              />
+              <button type="submit">
+                <Icon name="repeat" />
+                Повторять
+              </button>
+              <span className="muted">пусто — снять</span>
+            </form>
+          </Reveal>
+        </div>
+
+        <div className="card" style={{ marginBottom: 36 }}>
+          {task.description ? (
+            <div className="prose">
+              {task.description.split(/\n{2,}/).map((chunk, n) => (
+                <p key={n}>{chunk}</p>
+              ))}
+            </div>
+          ) : (
+            <p className="muted" style={{ margin: 0 }}>
+              Описания нет.
+            </p>
+          )}
+
+          <div className="bar rule">
+            <span className="muted">
+              Создал{" "}
+              {task.createdBy ? `агент ${task.createdBy.name}` : "владелец"} ·{" "}
+              {moment(task.createdAt)}
+            </span>
+            <span className="spacer" />
+            <Reveal label="Редактировать" icon="pencil" tone="go" drop wide>
+              <form method="post" action="/api/tasks">
+                <Back path={path} />
+                <input type="hidden" name="intent" value="update" />
+                <input type="hidden" name="id" value={id} />
+                <div className="row" style={{ marginBottom: 10 }}>
+                  <input type="text" name="title" defaultValue={task.title} required />
+                </div>
+                <textarea name="description" defaultValue={task.description} />
+                <div className="row" style={{ marginTop: 10 }}>
+                  <button type="submit">
+                    <Icon name="check" />
+                    Сохранить
+                  </button>
+                </div>
+              </form>
+            </Reveal>
+          </div>
+        </div>
+
+        <Head title="Подзадачи" count={tree.children.length}>
+          <Reveal label="подзадача" icon="plus" drop>
+            <form className="row" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="create" />
+              <input type="hidden" name="projectId" value={project.id} />
+              <input type="hidden" name="parentId" value={id} />
+              <input type="text" name="title" placeholder="Заголовок подзадачи" required />
+              <button type="submit">
+                <Icon name="plus" />
+                Добавить
+              </button>
+            </form>
+          </Reveal>
+        </Head>
+
+        {tree.children.length === 0 ? (
+          <p className="muted">Подзадач нет.</p>
+        ) : (
+          <div className="card tight list">
+            <Subtree nodes={tree.children} slug={slug} />
+          </div>
+        )}
+
+        <Head title="Лента" count={feed.length} />
+        <div className="card">
+          {feed.length === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>
+              Записей пока нет.
+            </p>
+          ) : (
+            <div className="feed">
+              {feed.map((entry) =>
+                entry.kind === "system" ? (
+                  <div className="system" key={entry.id}>
+                    {moment(entry.createdAt)} — {entry.author?.name ?? "владелец"}:{" "}
+                    {entry.body}
+                  </div>
+                ) : (
+                  <div key={entry.id}>
+                    <div className="who">
+                      {entry.author?.name ?? "владелец"} · {moment(entry.createdAt)}
+                    </div>
+                    <p>{entry.body}</p>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
+          <form
+            className="row"
+            method="post"
+            action="/api/tasks"
+            style={{ marginTop: feed.length === 0 ? 16 : 22 }}
+          >
             <Back path={path} />
-            <input type="hidden" name="intent" value="due" />
+            <input type="hidden" name="intent" value="comment" />
             <input type="hidden" name="id" value={id} />
-            <input type="date" name="dueAt" defaultValue={task.dueAt ? asDay(task.dueAt) : ""} />
-            <button type="submit">Поставить срок</button>
-            <span className="muted">до срока задача не видна агенту; пусто — снять</span>
+            <input type="text" name="body" placeholder="Написать в ленту" required />
+            <button className="icon" type="submit" title="Написать">
+              <Icon name="send" size={15} />
+            </button>
           </form>
         </div>
 
-        <h2>Заголовок и описание</h2>
-        <form method="post" action="/api/tasks">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="update" />
-          <input type="hidden" name="id" value={id} />
-          <div className="row">
-            <input type="text" name="title" defaultValue={task.title} required />
-          </div>
-          <textarea name="description" defaultValue={task.description} />
-          <div className="row">
-            <button type="submit">Сохранить</button>
-          </div>
-        </form>
-
-        <h2>Подзадачи</h2>
-        {tree.children.length > 0 ? (
-          <Subtree nodes={tree.children} slug={slug} />
-        ) : (
-          <p className="muted">Подзадач нет.</p>
-        )}
-        <form className="row" method="post" action="/api/tasks">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="create" />
-          <input type="hidden" name="projectId" value={project.id} />
-          <input type="hidden" name="parentId" value={id} />
-          <input type="text" name="title" placeholder="Заголовок подзадачи" required />
-          <button type="submit">Добавить подзадачу</button>
-        </form>
-
-        <h2>Лента</h2>
-        {feed.length === 0 && <p className="muted">Записей пока нет.</p>}
-        {feed.map((entry) => (
-          <div className={`feed-entry ${entry.kind}`} key={entry.id}>
-            <div className="muted">
-              {entry.author?.name ?? "владелец"}
-              {entry.kind === "system" && " · система"} · {when(entry.createdAt)}
-            </div>
-            <div>{entry.body}</div>
-          </div>
-        ))}
-        <form method="post" action="/api/tasks">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="comment" />
-          <input type="hidden" name="id" value={id} />
-          <textarea name="body" placeholder="Комментарий" required />
-          <div className="row">
-            <button type="submit">Написать</button>
-          </div>
-        </form>
-
-        <h2>Опасное</h2>
-        <div className="row">
-          <form method="post" action="/api/tasks">
+        <div className="bar" style={{ gap: 20, marginTop: 26 }}>
+          <form className="inline" method="post" action="/api/tasks">
             <Back path={path} />
             <input type="hidden" name="intent" value="make-template" />
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="scope" value="project" />
-            <button type="submit" disabled={task.parentId !== null}>
+            <button className="act" type="submit" disabled={task.parentId !== null}>
+              <Icon name="layers" />
               Сделать шаблоном проекта
             </button>
           </form>
-          <form method="post" action="/api/tasks">
+          <span className="spacer" />
+          <form className="inline" method="post" action="/api/tasks">
             <Back path={path} />
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="after" value={`/projects/${slug}`} />
             <ConfirmButton message="Удалить задачу вместе со всеми подзадачами и лентой?">
+              <Icon name="trash" />
               Удалить задачу
             </ConfirmButton>
           </form>

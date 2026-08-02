@@ -1,12 +1,24 @@
+/* «Тихий лист»: светлая бумага, иерархия подложкой, а не рамками. */
 :root {
-  --bg: #14161a;
-  --panel: #1c1f25;
-  --line: #2c313a;
-  --text: #e6e8ec;
-  --muted: #8b93a1;
-  --accent: #7aa2f7;
-  --danger: #f7768e;
-  color-scheme: dark;
+  --bg: #f5f2ec;
+  --panel: #fbfaf7;
+  --line: #eae5db;
+  --field: #e5dfd3;
+  --rule: #f0ece3;
+  --text: #2c2a26;
+  --ink: #38352f;
+  --muted: #918879;
+  --dim: #a89f90;
+  --accent: #5d7a42;
+  --accent-ink: #4f6a37;
+  --accent-bg: #f4f7ee;
+  --dot: #7d9a5b;
+  --dot-done: #b9c9a6;
+  --dot-line: #cfc7b8;
+  --danger: #a8574f;
+  --danger-bg: #fbf1ef;
+  --danger-line: #edd9d4;
+  color-scheme: light;
 }
 
 * {
@@ -17,11 +29,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 a {
-  color: var(--accent);
+  color: inherit;
   text-decoration: none;
 }
 a:hover {
@@ -29,73 +41,237 @@ a:hover {
 }
 
 main {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  padding: 30px 40px 44px;
 }
 
+/* ── шапка ─────────────────────────────────────────────────────────── */
+
 header.top {
-  border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
 header.top .inner {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 18px 40px;
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: center;
 }
 header.top .brand {
+  font-size: 15px;
   font-weight: 600;
-  color: var(--text);
   display: inline-flex;
+  gap: 9px;
   align-items: center;
-  gap: 8px;
 }
-header.top .spacer {
-  flex: 1;
+header.top nav {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
 }
+header.top nav a {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--muted);
+}
+header.top nav a.here {
+  color: var(--text);
+  font-weight: 600;
+}
+header.top .act {
+  font-size: 13px;
+}
+
+/* ── типографика ───────────────────────────────────────────────────── */
 
 h1 {
-  font-size: 22px;
-  margin: 0 0 16px;
+  font-size: 29px;
+  margin: 0 0 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 h2 {
-  font-size: 16px;
-  margin: 28px 0 10px;
-  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+h3 {
+  font-size: 19px;
+  margin: 0 0 12px;
+  font-weight: 600;
 }
 
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+.bad {
+  color: var(--danger);
+  font-size: 14px;
+}
+.off {
+  color: var(--dim);
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.crumbs {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 17px;
+  line-height: 1.75;
+  max-width: 62ch;
+  color: var(--ink);
+}
+.prose p {
+  margin: 0;
+}
+
+/* ── раскладка ─────────────────────────────────────────────────────── */
+
+.bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.spacer {
+  flex: 1;
+}
+.head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin: 30px 0 12px;
+}
+.rule {
+  border-top: 1px solid var(--rule);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+/* ── поля и кнопки ─────────────────────────────────────────────────── */
+
 input,
-textarea,
 select,
-button {
+textarea {
   font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line);
+  font-size: 14px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--field);
   border-radius: 8px;
-  padding: 7px 10px;
+  background: var(--bg);
+  color: var(--text);
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 textarea {
   width: 100%;
-  min-height: 90px;
+  height: auto;
+  min-height: 300px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  font: 400 15px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
   resize: vertical;
 }
+input[type="file"] {
+  height: auto;
+  padding: 6px 10px;
+}
+
 button {
-  background: var(--panel);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  height: 34px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--panel);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 button:hover {
-  border-color: var(--accent);
+  background: var(--accent-ink);
 }
-button.danger:hover {
-  border-color: var(--danger);
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+button.plain {
+  font-weight: 400;
+  padding: 0 16px;
+  border: 1px solid var(--field);
+  background: var(--bg);
+  color: var(--text);
+}
+button.plain:hover {
+  background: var(--panel);
+  border-color: var(--muted);
+}
+button.plain.bad {
+  height: 30px;
+  font-size: 13px;
+  padding: 0 12px;
   color: var(--danger);
+  border-color: var(--danger-line);
+}
+button.plain.bad:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+button.icon {
+  width: 34px;
+  flex: none;
+  padding: 0;
+}
+
+/* ссылка-действие: одинаково выглядит и как <a>, и как <button> */
+.act {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.act:hover {
+  background: none;
+  text-decoration: underline;
+}
+.act.go {
+  color: var(--accent);
+}
+.act.bad {
+  color: var(--danger);
+}
+.act:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
 }
 
 form.row {
@@ -103,142 +279,264 @@ form.row {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-  margin: 8px 0;
+  margin: 0;
 }
-form.row input[type="text"] {
+form.row input[type="text"],
+form.row input[type="password"] {
   flex: 1;
   min-width: 180px;
 }
+form.inline {
+  display: inline-flex;
+}
 
-/* поле «скопировать» живёт вне формы, а flex-правила были только у form.row —
-   поэтому значение обрезалось по ширине input */
+/* ── раскрывающееся действие ───────────────────────────────────────── */
+
+details.reveal > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.reveal > summary::marker,
+details.reveal > summary::-webkit-details-marker {
+  content: "";
+  display: none;
+}
+details.reveal > .pop {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+details.reveal.drop {
+  position: relative;
+}
+details.reveal.drop > .pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 5;
+  margin: 0;
+  min-width: 340px;
+  padding: 14px 16px;
+  border: 1px solid var(--field);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 12px 34px rgba(44, 42, 38, 0.12);
+}
+details.reveal.drop > .pop.wide {
+  width: 560px;
+}
+details.reveal.drop > .pop textarea {
+  min-height: 200px;
+}
+
+/* ── подложки ──────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+.card.tight {
+  padding: 8px 28px;
+}
+.card + .card {
+  margin-top: 12px;
+}
+
+.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 0 0 22px;
+  font-size: 14px;
+}
+.notice {
+  background: var(--accent-bg);
+  border-radius: 12px;
+  padding: 22px 26px;
+  margin: 0 0 32px;
+}
+.notice.slim {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+}
+.notice .lead {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+.notice input,
+.notice select,
+.notice button.plain,
+.notice pre {
+  background: var(--panel);
+}
+
+/* ── списки ────────────────────────────────────────────────────────── */
+
+.list .item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.list .item:last-child {
+  border-bottom: 0;
+}
+.list .grow {
+  flex: 1;
+}
+.list .kids {
+  padding-left: 24px;
+  border-left: 1px solid var(--rule);
+  margin-left: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--dot-line);
+  flex: none;
+}
+.dot.in_progress {
+  background: var(--dot);
+  border-color: var(--dot);
+}
+.dot.done {
+  background: var(--dot-done);
+  border-color: var(--dot-done);
+}
+.dot.live {
+  background: var(--dot);
+  border-color: var(--dot);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 18px;
+}
+.steps > div {
+  display: flex;
+  gap: 12px;
+}
+.steps .n {
+  color: #b3aa9a;
+}
+
+/* ── лента ─────────────────────────────────────────────────────────── */
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.feed .system {
+  color: var(--muted);
+  font-size: 14px;
+}
+.feed .who {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.feed p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 54ch;
+  white-space: pre-wrap;
+}
+
+/* ── команды и markdown ────────────────────────────────────────────── */
+
 .row.copy {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin: 8px 0;
 }
-.row.copy input[type="text"] {
+.row.copy input {
   flex: 1;
   min-width: 180px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-
 .snippet {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  margin: 8px 0;
 }
 .snippet pre {
   flex: 1;
   min-width: 0;
   margin: 0;
-  padding: 10px 12px;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  padding: 12px 14px;
   border-radius: 8px;
-  font-size: 13px;
+  background: var(--bg);
+  font: 400 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #4a453d;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.error {
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 16px;
-}
-
-.notice {
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 16px;
-  word-break: break-all;
-}
-
-.tree {
-  list-style: none;
-  padding-left: 18px;
-  margin: 0;
-  border-left: 1px solid var(--line);
-}
-.tree > li {
-  margin: 4px 0;
-}
-.tree summary {
-  cursor: pointer;
-}
-
-.status {
-  font-size: 12px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-}
-.status.in_progress {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.status.done {
-  color: #9ece6a;
-  border-color: #9ece6a;
-}
-.status.cancelled {
-  text-decoration: line-through;
-}
-
-.feed-entry {
-  border-left: 2px solid var(--line);
-  padding: 4px 0 4px 12px;
-  margin: 10px 0;
-}
-.feed-entry.system {
-  color: var(--muted);
-  font-style: italic;
-  font-size: 13px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  text-align: left;
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--line);
-  font-size: 14px;
-}
-
 .markdown {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 4px 18px 18px;
+  border-radius: 12px;
+  padding: 28px 32px;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown h1,
+.markdown h2 {
+  font-size: 22px;
+  margin: 26px 0 12px;
+  font-weight: 600;
+}
+.markdown h3 {
+  margin: 24px 0 12px;
+}
+.markdown p {
+  margin: 0 0 18px;
+  font-size: 17px;
+  line-height: 1.75;
+  max-width: 62ch;
+  color: var(--ink);
+}
+.markdown ul,
+.markdown ol {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.markdown li::before {
+  content: "—";
+  color: #b3aa9a;
+  margin-right: 12px;
 }
 .markdown pre {
-  background: var(--bg);
-  padding: 10px;
+  margin: 20px 0;
+  padding: 12px 14px;
   border-radius: 8px;
+  background: var(--bg);
   overflow-x: auto;
 }
 .markdown code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+  font-size: 14px;
+  color: #6f675c;
 }

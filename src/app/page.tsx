@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ConfirmButton } from "../confirm";
 import { listProjects } from "../domain/projects";
-import { Back, Banner, Header, when } from "../ui";
+import { Back, Banner, day, Header, Icon, plural, Reveal } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -20,42 +20,62 @@ export default async function ProjectsPage({
         <h1>Проекты</h1>
         <Banner error={error} />
 
-        <form className="row" method="post" action="/api/projects">
+        <form className="row" method="post" action="/api/projects" style={{ marginBottom: 30 }}>
           <Back path="/" />
           <input type="hidden" name="intent" value="create" />
           <input type="text" name="name" placeholder="Название проекта" required />
-          <button type="submit">Создать проект</button>
+          <button type="submit">
+            <Icon name="plus" />
+            Создать проект
+          </button>
         </form>
 
         {projects.length === 0 && <p className="muted">Пока ни одного проекта.</p>}
 
         {projects.map((project) => (
-          <div className="card" key={project.id}>
-            <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-              <Link href={`/projects/${project.slug}`} style={{ fontWeight: 600 }}>
+          <div className="card" key={project.id} style={{ padding: "20px 24px" }}>
+            <div className="bar" style={{ alignItems: "baseline" }}>
+              <Link
+                href={`/projects/${project.slug}`}
+                style={{ fontSize: 17, fontWeight: 600 }}
+              >
                 {project.name}
               </Link>
               <span className="muted">/{project.slug}</span>
-              <span className="spacer" style={{ flex: 1 }} />
-              <span className="muted">{when(project.createdAt)}</span>
+              <span className="spacer" />
+              <span className="muted">{day(project.createdAt)}</span>
             </div>
 
-            <form className="row" method="post" action="/api/projects">
-              <Back path="/" />
-              <input type="hidden" name="intent" value="rename" />
-              <input type="hidden" name="id" value={project.id} />
-              <input type="text" name="name" defaultValue={project.name} required />
-              <button type="submit">Переименовать</button>
-            </form>
+            <div className="bar" style={{ gap: 20, marginTop: 12 }}>
+              <span className="muted">
+                {plural(project._count.tasks, "задача", "задачи", "задач")} ·{" "}
+                {plural(project._count.tokens, "агент", "агента", "агентов")}
+              </span>
+              <span className="spacer" />
 
-            <form className="row" method="post" action="/api/projects">
-              <Back path="/" />
-              <input type="hidden" name="intent" value="delete" />
-              <input type="hidden" name="id" value={project.id} />
-              <ConfirmButton message={`Удалить «${project.name}» со всем содержимым?`}>
-                Удалить проект
-              </ConfirmButton>
-            </form>
+              <Reveal label="Переименовать" icon="pencil" drop>
+                <form className="row" method="post" action="/api/projects">
+                  <Back path="/" />
+                  <input type="hidden" name="intent" value="rename" />
+                  <input type="hidden" name="id" value={project.id} />
+                  <input type="text" name="name" defaultValue={project.name} required />
+                  <button type="submit">
+                    <Icon name="check" />
+                    Готово
+                  </button>
+                </form>
+              </Reveal>
+
+              <form className="inline" method="post" action="/api/projects">
+                <Back path="/" />
+                <input type="hidden" name="intent" value="delete" />
+                <input type="hidden" name="id" value={project.id} />
+                <ConfirmButton message={`Удалить «${project.name}» со всем содержимым?`}>
+                  <Icon name="trash" />
+                  Удалить
+                </ConfirmButton>
+              </form>
+            </div>
           </div>
         ))}
       </main>

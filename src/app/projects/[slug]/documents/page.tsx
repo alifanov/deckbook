@@ -2,41 +2,60 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listDocumentTree, type DocumentNode } from "../../../../domain/documents";
 import { getProjectBySlug } from "../../../../domain/projects";
-import { Back, Banner, Header, ProjectNav } from "../../../../ui";
+import { Back, Banner, day, Head, Header, Icon, plural, ProjectNav } from "../../../../ui";
 
 export const dynamic = "force-dynamic";
 
 function Branch({ node, slug }: { node: DocumentNode; slug: string }) {
-  const label = (
-    <Link href={`/projects/${slug}/documents/${node.id}`}>
-      {node.isFolder ? `${node.name}/` : node.name}
+  const link = (
+    <Link
+      href={`/projects/${slug}/documents/${node.id}`}
+      className="grow"
+      style={node.isFolder ? { fontWeight: 600, fontSize: 16 } : undefined}
+    >
+      {node.name}
     </Link>
   );
 
-  if (!node.isFolder || node.children.length === 0) return <li>{label}</li>;
-
   return (
-    <li>
-      <details open>
-        <summary>{label}</summary>
-        <ul className="tree">
+    <>
+      <div className="item">
+        {node.isFolder && (
+          <span className="muted" style={{ display: "inline-flex" }}>
+            <Icon name={node.children.length > 0 ? "down" : "right"} />
+          </span>
+        )}
+        {link}
+        {node.isFolder ? (
+          <span className="muted">{node.children.length}</span>
+        ) : (
+          <span className="muted">
+            {node.updatedBy?.name ?? "владелец"} · {day(node.updatedAt)}
+          </span>
+        )}
+      </div>
+
+      {node.children.length > 0 && (
+        <div className="kids">
           {node.children.map((child) => (
             <Branch key={child.id} node={child} slug={slug} />
           ))}
-        </ul>
-      </details>
-    </li>
+        </div>
+      )}
+    </>
   );
 }
 
-function flatten(nodes: DocumentNode[], depth = 0): { id: string; label: string }[] {
-  return nodes
+const folders = (nodes: DocumentNode[], depth = 0): { id: string; label: string }[] =>
+  nodes
     .filter((n) => n.isFolder)
     .flatMap((n) => [
       { id: n.id, label: `${"— ".repeat(depth)}${n.name}` },
-      ...flatten(n.children, depth + 1),
+      ...folders(n.children, depth + 1),
     ]);
-}
+
+const countFiles = (nodes: DocumentNode[]): number =>
+  nodes.reduce((n, node) => n + (node.isFolder ? 0 : 1) + countFiles(node.children), 0);
 
 export default async function DocumentsPage({
   params,
@@ -51,13 +70,12 @@ export default async function DocumentsPage({
   if (!project) notFound();
 
   const tree = await listDocumentTree(project.id);
-  const folders = flatten(tree);
   const path = `/projects/${slug}/documents`;
 
   const folderSelect = (
     <select name="parentId" defaultValue="">
       <option value="">в корне</option>
-      {folders.map((folder) => (
+      {folders(tree).map((folder) => (
         <option key={folder.id} value={folder.id}>
           {folder.label}
         </option>
@@ -68,54 +86,63 @@ export default async function DocumentsPage({
   return (
     <>
       <Header>
-        <ProjectNav slug={slug} />
+        <ProjectNav slug={slug} at="documents" />
       </Header>
       <main>
-        <h1>Документы проекта «{project.name}»</h1>
+        <p className="crumbs">
+          <Link href={`/projects/${slug}`}>{project.name}</Link>
+        </p>
+        <h1 style={{ marginBottom: 26 }}>Документы</h1>
         <Banner error={error} />
 
+        <Head title="Дерево" count={plural(countFiles(tree), "файл", "файла", "файлов")} />
         {tree.length === 0 ? (
           <p className="muted">Документов пока нет.</p>
         ) : (
-          <ul className="tree">
+          <div className="card tight list">
             {tree.map((node) => (
               <Branch key={node.id} node={node} slug={slug} />
             ))}
-          </ul>
+          </div>
         )}
 
-        <h2>Создать</h2>
-        <form className="row" method="post" action="/api/documents">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="create-folder" />
-          <input type="hidden" name="projectId" value={project.id} />
-          <input type="text" name="name" placeholder="Название папки" required />
-          {folderSelect}
-          <button type="submit">Создать папку</button>
-        </form>
+        <Head title="Добавить" />
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form className="row" method="post" action="/api/documents">
+            <Back path={path} />
+            <input type="hidden" name="projectId" value={project.id} />
+            <input type="text" name="name" placeholder="Название документа или папки" required />
+            <select name="intent" defaultValue="create-document">
+              <option value="create-document">документ</option>
+              <option value="create-folder">папка</option>
+            </select>
+            {folderSelect}
+            <button type="submit">
+              <Icon name="plus" />
+              Создать
+            </button>
+          </form>
 
-        <form className="row" method="post" action="/api/documents">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="create-document" />
-          <input type="hidden" name="projectId" value={project.id} />
-          <input type="text" name="name" placeholder="Название документа" required />
-          {folderSelect}
-          <button type="submit">Создать документ</button>
-        </form>
-
-        <h2>Загрузить файлы</h2>
-        <form className="row" method="post" action="/api/documents" encType="multipart/form-data">
-          <Back path={path} />
-          <input type="hidden" name="intent" value="import" />
-          <input type="hidden" name="projectId" value={project.id} />
-          <input type="file" name="files" accept=".md,.txt" multiple required />
-          {folderSelect}
-          <button type="submit">Импортировать</button>
-        </form>
-        <p className="muted">
-          Принимаются <code>.md</code> и <code>.txt</code>: содержимое становится документом, сам
-          файл нигде не сохраняется.
-        </p>
+          <form
+            className="row"
+            method="post"
+            action="/api/documents"
+            encType="multipart/form-data"
+          >
+            <Back path={path} />
+            <input type="hidden" name="intent" value="import" />
+            <input type="hidden" name="projectId" value={project.id} />
+            <input type="file" name="files" accept=".md,.txt" multiple required />
+            {folderSelect}
+            <button className="plain" type="submit">
+              <Icon name="upload" />
+              Загрузить .md или .txt
+            </button>
+            <span className="muted">
+              содержимое становится документом, сам файл нигде не сохраняется
+            </span>
+          </form>
+        </div>
       </main>
     </>
   );
