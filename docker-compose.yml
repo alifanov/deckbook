@@ -24,6 +24,10 @@ services:
       OWNER_PASSWORD: ${OWNER_PASSWORD}
       SESSION_SECRET: ${SESSION_SECRET}
       PORT: 3000
+      # Пусто → OTel не стартует и приложение работает как раньше
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      SIGNOZ_INGESTION_KEY: ${SIGNOZ_INGESTION_KEY:-}
+      SIGNOZ_SERVICE_NAME: ${SIGNOZ_SERVICE_NAME:-deckbook}
     expose:
       - 3000
     healthcheck:
