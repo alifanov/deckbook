@@ -25,7 +25,7 @@ export default async function ProjectsPage({
           <Back path="/" />
           <input type="hidden" name="intent" value="create" />
           <input type="text" name="name" placeholder="Название проекта" required />
-          <button type="submit">
+          <button className="plain quick" type="submit">
             <Icon name="plus" />
             Создать проект
           </button>
@@ -66,7 +66,7 @@ export default async function ProjectsPage({
               </span>
               <span className="spacer" />
 
-              <Reveal label="Переименовать" icon="pencil" drop>
+              <Reveal label="Переименовать" icon="pencil" drop bare>
                 <form className="row" method="post" action="/api/projects">
                   <Back path="/" />
                   <input type="hidden" name="intent" value="rename" />
@@ -83,9 +83,11 @@ export default async function ProjectsPage({
                 <Back path="/" />
                 <input type="hidden" name="intent" value="delete" />
                 <input type="hidden" name="id" value={project.id} />
-                <ConfirmButton message={`Удалить «${project.name}» со всем содержимым?`}>
+                <ConfirmButton
+                  message={`Удалить «${project.name}» со всем содержимым?`}
+                  label="Удалить"
+                >
                   <Icon name="trash" />
-                  Удалить
                 </ConfirmButton>
               </form>
             </div>
