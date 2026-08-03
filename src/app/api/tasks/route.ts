@@ -17,23 +17,30 @@ import {
   setStatus,
   updateTask,
 } from "../../../domain/tasks";
+import { listAgents } from "../../../domain/tokens";
 import { formHandler, optional, text } from "../../../http";
 
 export const POST = formHandler(async (form) => {
   const id = text(form, "id");
 
   switch (text(form, "intent")) {
-    case "create":
+    case "create": {
+      const projectId = text(form, "projectId");
+      // ничья задача не попадёт ни в один my_tasks — по умолчанию вешаем её
+      // на первого агента проекта, переназначить можно на карточке
+      const [agent] = await listAgents(projectId);
       await createTask(
         {
-          projectId: text(form, "projectId"),
+          projectId,
           parentId: optional(form, "parentId"),
           title: text(form, "title"),
           description: text(form, "description"),
+          assigneeTokenId: agent?.id ?? null,
         },
         OWNER,
       );
       return;
+    }
 
     case "update":
       await updateTask(
