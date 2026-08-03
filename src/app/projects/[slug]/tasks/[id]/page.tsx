@@ -102,10 +102,28 @@ export default async function TaskPage({
         <Banner error={error} />
 
         <div className="bar" style={{ gap: 22, marginBottom: 30, fontSize: 14 }}>
-          <span className="bar" style={{ gap: 8 }}>
-            <Dot status={task.status} />
-            {statusLabel(task.status)}
-          </span>
+          {/* статус меняется в один клик прямо здесь: кнопка на каждый чужой статус */}
+          <form className="bar" method="post" action="/api/tasks" style={{ gap: 8 }}>
+            <Back path={path} />
+            <input type="hidden" name="intent" value="status" />
+            <input type="hidden" name="id" value={id} />
+            <span className="bar" style={{ gap: 8 }}>
+              <Dot status={task.status} />
+              {statusLabel(task.status)}
+            </span>
+            {STATUSES.filter((s) => s !== task.status).map((s) => (
+              <button
+                key={s}
+                className="plain quick"
+                type="submit"
+                name="status"
+                value={s}
+                title={`Перевести в «${statusLabel(s)}»`}
+              >
+                {statusLabel(s)}
+              </button>
+            ))}
+          </form>
           <span className="muted">
             {task.assignedToOwner ? "владелец" : (task.assignee?.name ?? "ничья")}
           </span>
@@ -122,23 +140,6 @@ export default async function TaskPage({
           <span className="spacer" />
 
           <Reveal label="Изменить" icon="pencil" tone="go" drop wide>
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="status" />
-              <input type="hidden" name="id" value={id} />
-              <select name="status" defaultValue={task.status}>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {statusLabel(s)}
-                  </option>
-                ))}
-              </select>
-              <button type="submit">
-                <Icon name="check" />
-                Статус
-              </button>
-            </form>
-
             <form className="row" method="post" action="/api/tasks">
               <Back path={path} />
               <input type="hidden" name="intent" value="priority" />
