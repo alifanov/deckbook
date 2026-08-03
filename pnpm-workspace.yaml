@@ -2,7 +2,3 @@ onlyBuiltDependencies:
   - "@prisma/engines"
   - esbuild
   - prisma
-
-overrides:
-  # next pins sharp ^0.34.5; <0.35.0 inherits libvips CVEs (GHSA-f88m-g3jw-g9cj)
-  sharp: "^0.35.3"
