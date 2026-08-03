@@ -331,11 +331,15 @@ export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
 }
 
-/** Дерево задач проекта: в работе сверху, закрытое — внизу. */
+/**
+ * Дерево задач проекта: в работе сверху, закрытое — внизу. Внутри одного статуса
+ * важное идёт раньше неважного — сортировка по статусу устойчива и порядок выборки
+ * сохраняет.
+ */
 export async function listProjectTree(projectId: string): Promise<TaskNode[]> {
   const tasks = await prisma.task.findMany({
     where: { projectId },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
   });
   return sortByStatus(buildTree(tasks, null));
 }

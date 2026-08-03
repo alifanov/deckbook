@@ -88,6 +88,16 @@ describe("дерево задач", () => {
     expect(epics.map((e) => e.title)).toEqual(["Эпик"]);
   });
 
+  it("внутри одного статуса ставит важное выше неважного", async () => {
+    const project = await makeProject();
+    await createTask({ projectId: project.id, title: "Неважное", priority: "low" }, OWNER);
+    await createTask({ projectId: project.id, title: "Обычное" }, OWNER);
+    await createTask({ projectId: project.id, title: "Важное", priority: "high" }, OWNER);
+
+    const roots = await listProjectTree(project.id);
+    expect(roots.map((t) => t.title)).toEqual(["Важное", "Обычное", "Неважное"]);
+  });
+
   it("отказывает, если родитель из другого проекта", async () => {
     const a = await makeProject("A");
     const b = await makeProject("B");
