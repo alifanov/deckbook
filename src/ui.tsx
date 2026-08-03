@@ -258,6 +258,7 @@ export const Reveal = ({
   tone,
   drop,
   wide,
+  bare,
   children,
 }: {
   label: string;
@@ -266,15 +267,17 @@ export const Reveal = ({
   /** раскрыться поверх раскладки, а не раздвинуть её */
   drop?: boolean;
   wide?: boolean;
+  /** только значок: подпись уходит в title и aria-label */
+  bare?: boolean;
   children: ReactNode;
 }) => (
   <details className={drop ? "reveal drop" : "reveal"}>
     {/* .act висит на вложенном span: у самого <summary> нельзя менять display,
         иначе он выпадает из дерева доступности и перестаёт быть кнопкой */}
-    <summary>
+    <summary title={bare ? label : undefined} aria-label={bare ? label : undefined}>
       <span className={tone ? `act ${tone}` : "act"}>
         <Icon name={icon} />
-        {label}
+        {!bare && label}
       </span>
     </summary>
     <div className={wide ? "pop wide" : "pop"}>{children}</div>
