@@ -14,10 +14,8 @@ import {
   listProjectTree,
   listTasks,
   OWNER_ASSIGNEE,
-  STATUSES,
   type TaskNode,
 } from "../../../domain/tasks";
-import type { TaskStatus } from "../../../generated/prisma/client";
 import { listTokens } from "../../../domain/tokens";
 import { Header } from "../../../header";
 import {
@@ -33,6 +31,7 @@ import {
   Reveal,
   statusLabel,
 } from "../../../ui";
+import { Tiles } from "./tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -45,18 +44,6 @@ const Due = ({ task }: { task: { dueAt: Date | null } }) =>
       <span className="muted">срок {dueDay(task.dueAt)}</span>
     )
   ) : null;
-
-/** Сводка по статусам: где стоит проект, до того как читать сами задачи. */
-const Tiles = ({ counts }: { counts: Record<TaskStatus, number> }) => (
-  <div className="tiles">
-    {STATUSES.map((s) => (
-      <div className={`tile ${s}`} key={s}>
-        <span className="n">{counts[s]}</span>
-        <span className="muted">{statusLabel(s)}</span>
-      </div>
-    ))}
-  </div>
-);
 
 /** Столбик дня: заведено слева, закрыто справа. */
 const SLOT = 40;
@@ -225,8 +212,8 @@ export default async function ProjectTasksPage({
         </div>
         <Banner error={error} />
 
-        {/* сводка идёт до фильтров: она про весь проект и от отбора не зависит */}
-        <Tiles counts={counts} />
+        {/* сводка идёт до фильтров: считает она весь проект, а кликом задаёт отбор */}
+        <Tiles counts={counts} path={path} status={wanted} assignee={assignee} />
         <div className="card" style={{ marginBottom: 28 }}>
           <div className="bar" style={{ alignItems: "baseline", gap: 16 }}>
             <h2 style={{ margin: 0, fontSize: 15 }}>Заведено и закрыто</h2>
@@ -246,14 +233,9 @@ export default async function ProjectTasksPage({
 
         <div className="bar" style={{ gap: 8, marginBottom: 28 }}>
           <FilterForm action={path}>
-            <select name="status" defaultValue={status ?? ""}>
-              <option value="">Любой статус</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel(s)}
-                </option>
-              ))}
-            </select>
+            {/* статус выбирается плиткой; форме он нужен скрытым, иначе смена
+                исполнителя отправит GET без него и отбор по статусу слетит */}
+            {wanted && <input type="hidden" name="status" value={wanted} />}
             <select name="assignee" defaultValue={assignee ?? ""}>
               <option value="">Любой исполнитель</option>
               <option value={OWNER_ASSIGNEE}>Владелец</option>

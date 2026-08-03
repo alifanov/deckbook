@@ -530,11 +530,22 @@ details.reveal.drop > .pop textarea {
 }
 .tile {
   background: var(--panel);
+  border: 1px solid transparent;
   border-radius: 12px;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: pointer;
+}
+/* плитка — кнопка отбора, подчёркивание тут только мешает */
+.tile:hover {
+  text-decoration: none;
+  border-color: var(--line);
+}
+.tile.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
 }
 .tile .n {
   font-size: 26px;
