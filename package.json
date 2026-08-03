@@ -39,7 +39,8 @@
   },
   "pnpm": {
     "overrides": {
-      "postcss": ">=8.5.18"
+      "postcss": ">=8.5.18",
+      "@opentelemetry/propagator-jaeger": ">=2.9.0"
     }
   }
 }
