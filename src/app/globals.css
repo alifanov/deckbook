@@ -230,6 +230,16 @@ button.icon {
   flex: none;
   padding: 0;
 }
+/* быстрый перевод статуса: кнопка размером с подпись рядом */
+button.plain.quick {
+  height: 26px;
+  font-size: 13px;
+  padding: 0 10px;
+  color: var(--muted);
+}
+button.plain.quick:hover {
+  color: var(--text);
+}
 
 /* ссылка-действие: одинаково выглядит и как <a>, и как <button> */
 .act {
