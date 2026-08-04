@@ -6,6 +6,11 @@ import { DomainError } from "./domain/errors";
 export const redirect = (to: string) =>
   new Response(null, { status: 303, headers: { location: to } });
 
+/** Поле `back` приходит из формы, а уезжает в `Location`: `//evil.example`
+ * увёл бы с доверенного домена на чужой. Внутренний путь — ровно один `/`
+ * в начале (обратный слэш браузеры трактуют как второй слэш). */
+const internalPath = (back: string) => (/^\/($|[^/\\])/.test(back) ? back : "/");
+
 /**
  * Route handlers UI собственной логики не несут: разобрать форму, позвать
  * домен, вернуться назад. Отказ домена приезжает обратно текстом в адресе.
@@ -20,7 +25,7 @@ export function formHandler(
     if (!(await requestSignedIn(request))) return new Response("Требуется вход", { status: 403 });
 
     const form = await request.formData();
-    const back = String(form.get("back") ?? "/");
+    const back = internalPath(String(form.get("back") ?? "/"));
 
     try {
       return redirect((await action(form)) || back);
