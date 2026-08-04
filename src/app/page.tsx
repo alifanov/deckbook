@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ConfirmButton } from "../confirm";
 import { listProjects } from "../domain/projects";
+import { backlogTrend } from "../domain/tasks";
 import { Header } from "../header";
+import { Trend, TREND_DAYS } from "../trend";
 import { Back, Banner, day, Icon, plural, Reveal } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +15,8 @@ export default async function ProjectsPage({
 }) {
   const { error } = await searchParams;
   const projects = await listProjects();
+  const trends = await backlogTrend(TREND_DAYS);
+  const quiet = new Array<number>(TREND_DAYS).fill(0);
 
   return (
     <>
@@ -44,6 +48,7 @@ export default async function ProjectsPage({
               </Link>
               <span className="muted">/{project.slug}</span>
               <span className="spacer" />
+              <Trend trend={trends.get(project.id) ?? quiet} />
               <span className="muted">{day(project.createdAt)}</span>
             </div>
 
