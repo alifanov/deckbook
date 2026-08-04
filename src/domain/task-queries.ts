@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 import { fail } from "./errors";
-import { OWNER_OPEN, isClosed, today } from "./task-values";
+import { DUE_NOW, OWNER_OPEN, isClosed } from "./task-values";
 import { buildTree, type Node } from "./tree";
 import type { Task, TaskPriority, TaskStatus } from "../generated/prisma/client";
 
@@ -84,7 +84,7 @@ export function listTasks(
     where: {
       projectId,
       ...match,
-      ...(includeFuture ? {} : { OR: [{ dueAt: null }, { dueAt: { lte: today() } }] }),
+      ...(includeFuture ? {} : DUE_NOW()),
     },
     include: { assignee: true, createdBy: true },
     orderBy: [
@@ -97,12 +97,14 @@ export function listTasks(
 
 /**
  * Задачи владельца — из всех проектов сразу: у владельца границы проекта нет.
- * Закрытое не показываем, ненаступившие сроки прячутся только от агента
- * (ADR-0004). Порядок тот же: просроченное первым, бессрочное последним.
+ * Закрытое не показываем; отложенное на будущее по умолчанию тоже спрятано —
+ * список отвечает на вопрос «что делать уже сейчас» (ADR-0004), а увидеть
+ * отложенное можно через includeFuture. Порядок тот же: просроченное первым,
+ * бессрочное последним.
  */
-export const listOwnerTasks = () =>
+export const listOwnerTasks = (includeFuture = false) =>
   prisma.task.findMany({
-    where: OWNER_OPEN,
+    where: includeFuture ? OWNER_OPEN : { AND: [OWNER_OPEN, DUE_NOW()] },
     include: { project: true },
     orderBy: [
       { dueAt: { sort: "asc", nulls: "last" } },
