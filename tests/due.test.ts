@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { OWNER } from "../src/domain/author";
 import {
   asDay,
+  assignTaskToOwner,
+  countOwnerTasks,
   createTask,
   isOverdue,
+  listOwnerTasks,
   listTasks,
   parseDueDate,
   setDueDate,
@@ -48,6 +51,20 @@ describe("срок задачи", () => {
     await createTask({ projectId: project.id, title: "Давно", dueAt: shifted(-9) }, OWNER);
 
     expect(titles(await listTasks(project.id))).toEqual(["Давно", "Сегодня", "Без срока"]);
+  });
+
+  it("прячет отложенное и от владельца, пока он не попросит обратное", async () => {
+    const project = await makeProject();
+    const later = await createTask(
+      { projectId: project.id, title: "Отложенная", dueAt: shifted(3) },
+      OWNER,
+    );
+    const now = await createTask({ projectId: project.id, title: "Сейчас" }, OWNER);
+    for (const task of [later, now]) await assignTaskToOwner(task.id, OWNER);
+
+    expect(titles(await listOwnerTasks())).toEqual(["Сейчас"]);
+    expect(await countOwnerTasks()).toBe(1);
+    expect(titles(await listOwnerTasks(true)).sort()).toEqual(["Отложенная", "Сейчас"]);
   });
 
   it("считает просроченным только прошедший срок", async () => {

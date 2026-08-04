@@ -1,12 +1,16 @@
 import { prisma } from "../db";
-import { OWNER_OPEN, STATUSES, UNASSIGNED, asDay, today } from "./task-values";
+import { DUE_NOW, OWNER_OPEN, STATUSES, UNASSIGNED, asDay, today } from "./task-values";
 import type { TaskStatus } from "../generated/prisma/client";
 
 export const countUnassigned = (projectId: string) =>
   prisma.task.count({ where: { projectId, ...UNASSIGNED } });
 
-/** Незакрытые задачи владельца одним числом — для счётчика в хидере. */
-export const countOwnerTasks = () => prisma.task.count({ where: OWNER_OPEN });
+/**
+ * Незакрытые задачи владельца одним числом — для счётчика в хидере. Считает
+ * ровно то, что страница показывает по умолчанию: отложенное на будущее мимо.
+ */
+export const countOwnerTasks = () =>
+  prisma.task.count({ where: { AND: [OWNER_OPEN, DUE_NOW()] } });
 
 /** Сводка проекта по статусам. Нули в ней тоже есть — пустой статус это факт. */
 export async function countByStatus(projectId: string): Promise<Record<TaskStatus, number>> {

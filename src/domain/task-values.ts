@@ -76,3 +76,6 @@ export const OWNER_OPEN = {
     { status: "needs_human" as const },
   ],
 };
+
+/** Срок уже наступил или его нет — то, за что пора браться (ADR-0004). */
+export const DUE_NOW = () => ({ OR: [{ dueAt: null }, { dueAt: { lte: today() } }] });
