@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import { POST } from "../src/app/api/tasks/route";
 import { listTasks } from "../src/domain/tasks";
 import { revokeToken } from "../src/domain/tokens";
-import { makeProject, makeToken } from "./helpers";
+import { makeProject, makeToken, sessionHeader } from "./helpers";
 
-function submit(fields: Record<string, string>) {
+async function submit(fields: Record<string, string>) {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
-  return POST(new Request("http://localhost/api/tasks", { method: "POST", body: form }));
+  return POST(
+    new Request("http://localhost/api/tasks", {
+      method: "POST",
+      body: form,
+      headers: await sessionHeader(),
+    }),
+  );
 }
 
 describe("создание задачи через интерфейс", () => {

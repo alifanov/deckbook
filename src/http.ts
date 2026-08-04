@@ -1,3 +1,4 @@
+import { requestSignedIn } from "./auth";
 import { DomainError } from "./domain/errors";
 
 /** ponytail: относительный Location — за проксей и с проброшенным портом
@@ -8,11 +9,16 @@ export const redirect = (to: string) =>
 /**
  * Route handlers UI собственной логики не несут: разобрать форму, позвать
  * домен, вернуться назад. Отказ домена приезжает обратно текстом в адресе.
+ *
+ * Сессию проверяем здесь же, до разбора формы: middleware — первый рубеж,
+ * но мутации не должны держаться на нём одном.
  */
 export function formHandler(
   action: (form: FormData) => Promise<string | void>,
 ): (request: Request) => Promise<Response> {
   return async (request: Request) => {
+    if (!(await requestSignedIn(request))) return new Response("Требуется вход", { status: 403 });
+
     const form = await request.formData();
     const back = String(form.get("back") ?? "/");
 
