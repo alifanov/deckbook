@@ -54,4 +54,17 @@ describe("route handler проверяет сессию сам, без middlewar
     expect(response.status).toBe(303);
     expect(await listTasks(project.id)).toHaveLength(1);
   });
+
+  // Браузер отдаёт куку ровно в том виде, в каком её записал Next: `:` — как `%3A`.
+  it("принимает куку в том виде, в каком её кодирует Next", async () => {
+    const project = await makeProject();
+    const raw = (await sessionHeader()).cookie.slice(`${SESSION_COOKIE}=`.length);
+
+    const response = await createTask(project.id, {
+      cookie: `${SESSION_COOKIE}=${encodeURIComponent(raw)}`,
+    });
+
+    expect(response.status).toBe(303);
+    expect(await listTasks(project.id)).toHaveLength(1);
+  });
 });

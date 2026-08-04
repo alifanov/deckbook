@@ -58,11 +58,22 @@ export async function isSignedIn(): Promise<boolean> {
   return isValidSession((await cookies()).get(SESSION_COOKIE)?.value, epoch);
 }
 
-/** ponytail: свой разбор Cookie — одна кука, брать ради неё зависимость незачем. */
+/**
+ * ponytail: свой разбор Cookie — одна кука, брать ради неё зависимость незачем.
+ * Значение декодируем: Next кодирует его при установке (`:` уезжает в `%3A`),
+ * а `cookies()` декодирует обратно — сырой заголовок этого не делает сам.
+ */
 function cookieFrom(request: Request, name: string): string | undefined {
   for (const part of (request.headers.get("cookie") ?? "").split(";")) {
     const index = part.indexOf("=");
-    if (index > 0 && part.slice(0, index).trim() === name) return part.slice(index + 1).trim();
+    if (index > 0 && part.slice(0, index).trim() === name) {
+      const value = part.slice(index + 1).trim();
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return value;
+      }
+    }
   }
   return undefined;
 }
