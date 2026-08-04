@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { OWNER } from "../src/domain/author";
-import { asDay, countByStatus, createTask, dailyFlow, setStatus, today } from "../src/domain/tasks";
+import {
+  asDay,
+  backlogTrend,
+  countByStatus,
+  createTask,
+  dailyFlow,
+  setStatus,
+  today,
+} from "../src/domain/tasks";
 import { prisma } from "../src/db";
 import { makeProject } from "./helpers";
 
@@ -70,5 +78,45 @@ describe("темп работы по дням", () => {
 
     const flow = await dailyFlow(project.id, 7);
     expect(flow.reduce((sum, d) => sum + d.created, 0)).toBe(0);
+  });
+});
+
+describe("ход бэклога", () => {
+  it("копит разницу заведённого и закрытого по дням", async () => {
+    const project = await makeProject();
+    const stays = await createTask({ projectId: project.id, title: "Осталась" }, OWNER);
+    const closed = await createTask({ projectId: project.id, title: "Закрыта" }, OWNER);
+    await setStatus(closed.id, "done", OWNER);
+    // обе заведены позавчера, вторая закрыта сегодня
+    await prisma.task.updateMany({
+      where: { id: { in: [stays.id, closed.id] } },
+      data: { createdAt: shifted(-2) },
+    });
+
+    const trend = (await backlogTrend(7)).get(project.id);
+
+    expect(trend).toHaveLength(7);
+    // до позавчера пусто, потом +2, сегодня одну закрыли — остаётся +1
+    expect(trend?.slice(0, 4)).toEqual([0, 0, 0, 0]);
+    expect(trend?.slice(4)).toEqual([2, 2, 1]);
+  });
+
+  it("не даёт проекту без движения ряда и не смешивает проекты", async () => {
+    const busy = await makeProject("Живой");
+    const quiet = await makeProject("Тихий");
+    await createTask({ projectId: busy.id, title: "Работа" }, OWNER);
+
+    const trends = await backlogTrend(7);
+
+    expect(trends.get(quiet.id)).toBeUndefined();
+    expect(trends.get(busy.id)?.at(-1)).toBe(1);
+  });
+
+  it("не считает то, что вышло за окно", async () => {
+    const project = await makeProject();
+    const old = await createTask({ projectId: project.id, title: "Старьё" }, OWNER);
+    await prisma.task.update({ where: { id: old.id }, data: { createdAt: shifted(-30) } });
+
+    expect((await backlogTrend(7)).get(project.id)).toBeUndefined();
   });
 });

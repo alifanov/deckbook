@@ -579,6 +579,25 @@ details.reveal.drop > .pop textarea {
 .flow .closed {
   fill: var(--dot-done);
 }
+/* недельный ход бэклога на карточке проекта: растёт — тревожно, падает — хорошо */
+.trend {
+  flex: none;
+  align-self: center;
+  overflow: visible;
+}
+.trend polyline {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trend.up polyline {
+  stroke: var(--danger);
+}
+.trend.down polyline {
+  stroke: var(--dot);
+}
+
 .swatch {
   display: inline-block;
   width: 10px;

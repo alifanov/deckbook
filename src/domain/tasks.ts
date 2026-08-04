@@ -80,6 +80,8 @@ export const asDay = (date: Date): string => date.toISOString().slice(0, 10);
 
 const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
+const DAY = 24 * 60 * 60 * 1000;
+
 /** Сегодня как день — граница, по которой срок считается наступившим. */
 export const today = () => day(asDay(new Date()));
 
@@ -428,7 +430,6 @@ export type DayFlow = { day: string; created: number; closed: number };
  * в графике читается только на фоне соседей.
  */
 export async function dailyFlow(projectId: string, days = 14): Promise<DayFlow[]> {
-  const DAY = 24 * 60 * 60 * 1000;
   const from = new Date(today().getTime() - (days - 1) * DAY);
   const tasks = await prisma.task.findMany({
     where: { projectId, OR: [{ createdAt: { gte: from } }, { lastClosedAt: { gte: from } }] },
@@ -448,6 +449,40 @@ export async function dailyFlow(projectId: string, days = 14): Promise<DayFlow[]
     if (closed) closed.closed++;
   }
   return [...flow.values()];
+}
+
+/**
+ * Ход бэклога по дням для всех проектов сразу — ряд на проект, длиной `days`.
+ * Значение дня — накопленная разница «заведено минус закрыто» с начала окна,
+ * то есть ряд относительный: он показывает не размер бэклога, а куда тот идёт.
+ * Растёт — задач набегает больше, чем закрывается; падает — разгребаем.
+ * ponytail: один запрос на все проекты, суммирование в памяти — проектов десятки.
+ */
+export async function backlogTrend(days = 7): Promise<Map<string, number[]>> {
+  const from = new Date(today().getTime() - (days - 1) * DAY);
+  const tasks = await prisma.task.findMany({
+    where: { OR: [{ createdAt: { gte: from } }, { lastClosedAt: { gte: from } }] },
+    select: { projectId: true, createdAt: true, lastClosedAt: true },
+  });
+
+  const slot = new Map<string, number>();
+  for (let i = 0; i < days; i++) slot.set(asDay(new Date(from.getTime() + i * DAY)), i);
+
+  const trends = new Map<string, number[]>();
+  for (const task of tasks) {
+    const delta = trends.get(task.projectId) ?? new Array<number>(days).fill(0);
+    trends.set(task.projectId, delta);
+    // задача могла попасть в выборку по одной дате, а второй уехать за окно
+    const created = slot.get(asDay(task.createdAt));
+    if (created !== undefined) delta[created]++;
+    const closed = task.lastClosedAt && slot.get(asDay(task.lastClosedAt));
+    if (closed !== undefined && closed !== null) delta[closed]--;
+  }
+
+  for (const delta of trends.values()) {
+    for (let i = 1; i < days; i++) delta[i] += delta[i - 1];
+  }
+  return trends;
 }
 
 /** Задача с её поддеревом — то, что агент читает перед работой. */
