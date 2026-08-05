@@ -52,35 +52,10 @@
   .play{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px}
   .legend{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--muted)}
   .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
-  /* ── переключатель вида диаграммы ── */
-  .views{display:flex; gap:6px; margin-bottom:10px}
-  .views button{
-    background:transparent; color:var(--muted); border:1px solid var(--border);
-    padding:5px 12px; border-radius:16px; font-size:12.5px; cursor:pointer;
-  }
-  .views button.on{background:var(--panel2); color:var(--text); border-color:#4b5468}
-  .view-wrap{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:14px}
-  .view-wrap.dim .msg, .view-wrap.dim .art-row, .view-wrap.dim .lane-card{opacity:.2}
-  .view-wrap.dim .msg.hl, .view-wrap.dim .art-row.hl, .view-wrap.dim .lane-card.hl{opacity:1}
-
-  /* вид «что и куда» */
-  .art{display:flex; flex-direction:column}
-  .art-row{
-    display:flex; align-items:center; gap:9px; padding:7px 6px; border-radius:8px;
-    cursor:pointer; transition:opacity .25s, background .15s; font-size:13.5px; white-space:nowrap;
-  }
-  .art-row:hover{background:var(--panel2)}
-  .art-row.hl{background:var(--panel2)}
-  .art-row .n{
-    flex:none; font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums;
-    width:18px; height:18px; line-height:17px; text-align:center; border-radius:50%; border:1px solid currentColor;
-  }
-  .art-row .who{flex:none; width:82px; color:var(--muted); font-size:12.5px; text-align:right}
-  .art-row .arr{flex:none; color:var(--muted)}
-  .art-row .dst{flex:none; font-size:11px; font-weight:600; letter-spacing:.3px; border:1px solid currentColor; border-radius:12px; padding:2px 9px}
-  .art-row .what{color:var(--text); overflow:hidden; text-overflow:ellipsis}
-
-  /* вид «дорожки» */
+  /* ── дорожки акторов ── */
+  .view-wrap{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:14px}
+  .view-wrap.dim .lane-card, .view-wrap.dim .link{opacity:.18}
+  .view-wrap.dim .lane-card.hl, .view-wrap.dim .link.hl{opacity:1}
   .lanes{position:relative; min-width:560px}
   .lanes-head{display:grid; margin-bottom:8px}
   .lanes-head span{font-size:11px; font-weight:600; letter-spacing:.4px; text-align:center}
@@ -89,17 +64,17 @@
     border:1px solid currentColor; border-radius:9px; padding:6px 10px; cursor:pointer;
     transition:opacity .25s, background .15s; background:var(--panel2); display:flex; gap:8px; align-items:baseline;
   }
+  .lane-card:hover{background:#232833}
+  .lane-card.hl{background:#232833; box-shadow:0 0 0 1px currentColor}
   .lane-card b{color:var(--text); font-size:12.5px; font-weight:600; line-height:1.3}
   .lane-card .n{flex:none; font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums}
-  .lanes svg.links{position:absolute; inset:0; pointer-events:none}
 
-  /* вид «sequence» */
-  #seq{display:block}
-  #seq .msg{cursor:pointer; transition:opacity .25s}
-  #seq .lbl{font-size:11.5px; fill:currentColor}
-  #seq .msg.hl .lbl{font-weight:700}
-  #seq .num{font-size:9.5px; font-weight:700; fill:var(--text)}
-  #seq .actor{font-size:11px; font-weight:600; letter-spacing:.4px}
+  .lanes svg.links{position:absolute; inset:0; pointer-events:none}
+  .link{transition:opacity .25s}
+  .link path{stroke:var(--border); stroke-width:1.5; fill:none}
+  .link polygon{fill:var(--border)}
+  .link.hl path{stroke:currentColor; stroke-width:2.5}   /* цвет — актор шага, к которому ведёт */
+  .link.hl polygon{fill:currentColor}
 
   .steps{display:flex; flex-direction:column; gap:8px}
   .step{
@@ -187,7 +162,6 @@
         <button class="play" id="playBtn">▶ Проиграть</button>
       </div>
       <div class="legend" id="legend"></div>
-      <div class="views" id="views"></div>
       <div class="view-wrap" id="viewWrap"></div>
       <div class="steps" id="steps"></div>
     </div>
@@ -416,98 +390,7 @@ $('legend').innerHTML = Object.values(ACTORS)
 
 let timer = null;
 
-/* Шаг в данных знает только «своего» актора — но это получатель действия
-   (документ, задача, код). Отправитель — тот, кто в этот момент действует:
-   рутина или владелец. Отсюда честные стрелки вместо «Документ → Задача». */
-const ACTIVE = {routine:1, owner:1};
-function flow(steps){
-  let doer = steps[0].a;
-  return steps.map((st,i) => {
-    const to = st.a;
-    const from = ACTIVE[to] ? (i===0 ? to : steps[i-1].a) : doer;
-    if (ACTIVE[to]) doer = to;
-    return {from, to};
-  });
-}
-
-/* ── вид 1: sequence-диаграмма ── */
-function seqSvg(steps){
-  const cols = Object.keys(ACTORS).filter(k => steps.some(st => st.a===k));
-  const n = cols.length, colW = Math.max(160, 660/n), W = colW*n;
-  const HEAD = 40, ROW = 58, H = HEAD + steps.length*ROW + 12;
-  const cx = i => colW*(i+0.5), bw = Math.min(colW-16, 132);
-  const link = flow(steps);
-
-  const head = cols.map((k,i) => `
-    <g>
-      <rect x="${cx(i)-bw/2}" y="6" width="${bw}" height="24" rx="12" fill="var(--panel2)" stroke="var(--border)"/>
-      <text class="actor" x="${cx(i)}" y="22" text-anchor="middle" fill="${ACTORS[k].color}">${ACTORS[k].label}</text>
-    </g>
-    <line x1="${cx(i)}" y1="${HEAD}" x2="${cx(i)}" y2="${H-8}" stroke="var(--border)" stroke-dasharray="4 5"/>`).join('');
-
-  const msgs = steps.map((st,i) => {
-    const to = cols.indexOf(link[i].to), from = cols.indexOf(link[i].from);
-    const c = ACTORS[st.a].color, y = HEAD + i*ROW + 34;
-    const fx = cx(from), tx = cx(to);
-    let wire, lx, anchor;
-    if (from === to){                                   // self-вызов
-      wire = `<path d="M${fx} ${y-14} h30 a8 8 0 0 1 0 16 h-30" fill="none" stroke="${c}" stroke-width="2"/>
-              <polygon points="${fx},${y+2} ${fx+9},${y-2.5} ${fx+9},${y+6.5}" fill="${c}"/>`;
-      lx = fx + 46; anchor = 'start';
-    } else {
-      const d = tx > fx ? 1 : -1;
-      wire = `<line x1="${fx}" y1="${y}" x2="${tx-7*d}" y2="${y}" stroke="${c}" stroke-width="2"/>
-              <polygon points="${tx},${y} ${tx-9*d},${y-4.5} ${tx-9*d},${y+4.5}" fill="${c}"/>`;
-      lx = (fx+tx)/2; anchor = 'middle';                // подпись центрируется над стрелкой
-    }
-    return `<g class="msg" data-i="${i}" style="color:${c}">
-      <title>${st.t}</title>
-      ${wire}
-      <text class="lbl" x="${lx}" y="${y-11}" text-anchor="${anchor}">${st.t}</text>
-      <circle cx="${fx}" cy="${y}" r="8.5" fill="var(--panel)" stroke="${c}" stroke-width="1.5"/>
-      <text class="num" x="${fx}" y="${y+3.5}" text-anchor="middle">${i+1}</text>
-    </g>`;
-  }).join('');
-
-  return {w:W, h:H, html:head + msgs};
-}
-
-function drawSeq(wrap, s){
-  wrap.innerHTML = '<svg id="seq"></svg>';
-  const svg = wrap.firstChild, {w,h,html} = seqSvg(s.steps);
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.setAttribute('width', w); svg.setAttribute('height', h);
-  svg.innerHTML = html;
-
-  /* подписи мерим только после вставки — иначе ширину текста не узнать */
-  svg.querySelectorAll('text.lbl').forEach(t => {
-    const bb = t.getBBox();
-    if (t.getAttribute('text-anchor')==='start' && bb.x + bb.width > w-4){
-      t.setAttribute('text-anchor','end');               // self-подпись не влезла справа — уводим влево
-      t.setAttribute('x', +t.getAttribute('x') - 60);
-    }
-    const b2 = t.getBBox(), x = +t.getAttribute('x');
-    if (b2.x + b2.width > w-4) t.setAttribute('x', x - (b2.x + b2.width - (w-4)));
-    else if (b2.x < 4) t.setAttribute('x', x + (4 - b2.x));
-  });
-}
-
-/* ── вид 2: что и куда записывается ── */
-function drawArtifacts(wrap, s){
-  const link = flow(s.steps);
-  wrap.innerHTML = `<div class="art">${s.steps.map((st,i) => {
-    const src = ACTORS[link[i].from], dst = ACTORS[st.a];
-    return `<div class="msg art-row" data-i="${i}" style="color:${dst.color}">
-      <span class="n">${i+1}</span>
-      <span class="who">${src.label}</span>
-      <span class="arr">→</span>
-      <span class="dst">${dst.label}</span>
-      <span class="what">${st.t}</span>
-    </div>`;
-  }).join('')}</div>`;
-}
-
-/* ── вид 3: дорожки акторов ── */
+/* ── дорожки акторов: карточка шага стоит в колонке своего актора ── */
 function drawLanes(wrap, s){
   const cols = Object.keys(ACTORS).filter(k => s.steps.some(st => st.a===k));
   const grid = `grid-template-columns:repeat(${cols.length}, minmax(120px,1fr)); gap:10px`;
@@ -515,39 +398,33 @@ function drawLanes(wrap, s){
     <div class="lanes-head" style="${grid}">${cols.map(k =>
       `<span style="color:${ACTORS[k].color}">${ACTORS[k].label}</span>`).join('')}</div>
     ${s.steps.map((st,i) => `<div class="lane-row" style="${grid}">
-      <div class="msg lane-card" data-i="${i}" style="grid-column:${cols.indexOf(st.a)+1}; color:${ACTORS[st.a].color}">
+      <div class="lane-card" data-i="${i}" style="grid-column:${cols.indexOf(st.a)+1}; color:${ACTORS[st.a].color}">
         <span class="n">${i+1}</span><b>${st.t}</b>
       </div></div>`).join('')}
     <svg class="links"></svg>
   </div>`;
 
-  /* соединители между карточками — координаты берём после вёрстки */
+  /* соединители между карточками — координаты берём после вёрстки.
+     data-i соединителя = шаг, в который он ведёт: подсвечивается вместе с ним. */
   const lanes = wrap.querySelector('.lanes'), svg = lanes.querySelector('svg.links');
   const cards = [...lanes.querySelectorAll('.lane-card')];
   svg.setAttribute('width', lanes.offsetWidth); svg.setAttribute('height', lanes.offsetHeight);
   svg.innerHTML = cards.slice(1).map((c,k) => {
     const a = cards[k], x1 = a.offsetLeft + a.offsetWidth/2, y1 = a.offsetTop + a.offsetHeight;
     const x2 = c.offsetLeft + c.offsetWidth/2, y2 = c.offsetTop;
-    return `<path d="M${x1} ${y1} V${(y1+y2)/2} H${x2} V${y2-5}" fill="none" stroke="var(--border)" stroke-width="1.5"/>
-            <polygon points="${x2},${y2} ${x2-4},${y2-6} ${x2+4},${y2-6}" fill="var(--border)"/>`;
+    return `<g class="link" data-i="${k+1}" style="color:${ACTORS[s.steps[k+1].a].color}">
+      <path d="M${x1} ${y1} V${(y1+y2)/2} H${x2} V${y2-6}"/>
+      <polygon points="${x2},${y2} ${x2-4.5},${y2-7} ${x2+4.5},${y2-7}"/>
+    </g>`;
   }).join('');
 }
 
-const VIEWS = [
-  ['art',  'Что и куда пишется', drawArtifacts],
-  ['seq',  'Sequence',           drawSeq],
-  ['lane', 'Дорожки',            drawLanes],
-];
-let view = 'art', current = null;
-
 function renderScenario(s){
-  current = s;
   clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
   document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
   $('flowTitle').innerHTML = s.icon + ' ' + s.title + (s.plan ? planBadge : '');
-  document.querySelectorAll('.views button').forEach(b => b.classList.toggle('on', b.dataset.v===view));
 
-  VIEWS.find(v => v[0]===view)[2]($('viewWrap'), s);
+  drawLanes($('viewWrap'), s);
 
   $('steps').innerHTML = s.steps.map((st,i) => `
     <div class="step" data-i="${i}" style="border-left-color:${ACTORS[st.a].color}">
@@ -556,21 +433,18 @@ function renderScenario(s){
     </div>`).join('');
 
   highlight(-1);
-  document.querySelectorAll('#viewWrap .msg, #steps .step').forEach(el =>
+  document.querySelectorAll('#viewWrap .lane-card, #steps .step').forEach(el =>
     el.onclick = () => highlight(el.classList.contains('hl') ? -1 : +el.dataset.i));
 }
 
-/* i < 0 — снять выделение; иначе подсветить шаг i и в диаграмме, и в списке */
+/* i < 0 — снять выделение; иначе подсветить шаг i: карточку, ведущий в неё
+   соединитель (ярко, цветом актора) и запись в списке под схемой */
 function highlight(i){
   const wrap = $('viewWrap'), box = $('steps'), on = i >= 0;
   wrap.classList.toggle('dim', on); box.classList.toggle('dim', on);
-  document.querySelectorAll('#viewWrap .msg, #steps .step')
+  document.querySelectorAll('#viewWrap .lane-card, #viewWrap .link, #steps .step')
     .forEach(el => el.classList.toggle('hl', on && +el.dataset.i === i));
 }
-
-$('views').innerHTML = VIEWS.map(([v,label]) => `<button data-v="${v}">${label}</button>`).join('');
-document.querySelectorAll('.views button').forEach(b =>
-  b.onclick = () => { view = b.dataset.v; renderScenario(current); });
 
 $('scenList').innerHTML = SCENARIOS.map(s =>
   `<button data-id="${s.id}" class="${s.plan?'plan':''}">${s.icon} ${s.title}${s.plan?planBadge:''}<small>${s.sub}</small></button>`).join('');
