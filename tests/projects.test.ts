@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { OWNER } from "../src/domain/author";
-import { listProjects } from "../src/domain/projects";
+import { listProjects, setProjectLocalPath } from "../src/domain/projects";
 import { createTask, setStatus } from "../src/domain/tasks";
 import { makeProject } from "./helpers";
 
@@ -17,5 +17,17 @@ describe("список проектов", () => {
 
     const listed = (await listProjects()).find((p) => p.id === project.id);
     expect(listed?._count.tasks).toBe(2);
+  });
+});
+
+describe("папка проекта", () => {
+  it("берёт абсолютный путь, снимается пустым, относительный отвергает", async () => {
+    const project = await makeProject();
+
+    expect((await setProjectLocalPath(project.id, " /Users/me/code/x ")).localPath).toBe(
+      "/Users/me/code/x",
+    );
+    expect((await setProjectLocalPath(project.id, "")).localPath).toBe("");
+    await expect(setProjectLocalPath(project.id, "code/x")).rejects.toThrow();
   });
 });

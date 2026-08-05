@@ -209,6 +209,26 @@ export default async function ProjectTasksPage({
               </div>
             </form>
           </Reveal>
+          {/* путь к чекауту нужен только кнопке «Исправить» на задаче — потому
+              рядом с целью, а не в отдельных настройках проекта */}
+          <Reveal label="Папка" drop wide>
+            <form className="row" method="post" action="/api/projects">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="local-path" />
+              <input type="hidden" name="id" value={project.id} />
+              <input
+                type="text"
+                name="localPath"
+                defaultValue={project.localPath}
+                placeholder="/Users/you/code/project"
+              />
+              <button type="submit">
+                <Icon name="check" />
+                Сохранить
+              </button>
+              <span className="muted">пусто — снять</span>
+            </form>
+          </Reveal>
         </div>
         <Banner error={error} />
 
