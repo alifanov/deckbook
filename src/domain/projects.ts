@@ -60,6 +60,14 @@ export async function setProjectGoal(id: string, goal: string) {
   return prisma.project.update({ where: { id }, data: { goal: goal.trim() } });
 }
 
+/** Путь к чекауту; пустая строка снимает его. Только абсолютный — иначе
+ *  Claude Code откроет не то, а относительный путь ему не от чего считать. */
+export async function setProjectLocalPath(id: string, localPath: string) {
+  const value = localPath.trim();
+  if (value && !value.startsWith("/")) fail("Путь к папке должен быть абсолютным");
+  return prisma.project.update({ where: { id }, data: { localPath: value } });
+}
+
 export async function deleteProject(id: string) {
   await prisma.project.delete({ where: { id } });
 }

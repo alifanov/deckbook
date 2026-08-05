@@ -3,6 +3,7 @@ import {
   deleteProject,
   renameProject,
   setProjectGoal,
+  setProjectLocalPath,
 } from "../../../domain/projects";
 import { formHandler, text } from "../../../http";
 
@@ -17,6 +18,9 @@ export const POST = formHandler(async (form) => {
       return;
     case "goal":
       await setProjectGoal(text(form, "id"), text(form, "goal"));
+      return;
+    case "local-path":
+      await setProjectLocalPath(text(form, "id"), text(form, "localPath"));
       return;
     case "delete":
       await deleteProject(text(form, "id"));

@@ -82,9 +82,11 @@ export default async function TaskPage({
     task.parentId ? getTask(task.parentId) : null,
   ]);
   const path = `/projects/${slug}/tasks/${id}`;
-  // ponytail: без ?folder — папку и ветку выбирает сам десктопный Claude Code,
-  // диплинк параметра для ветки не принимает
-  const fixHref = `claude://code/new?q=${encodeURIComponent(`/deckbook:fix-task ${id}`)}`;
+  // без folder десктоп открывает папку последней сессии — то есть чужой проект.
+  // ветку диплинк задать не умеет: с folder её выбрать уже не дадут
+  const fixHref =
+    `claude://code/new?q=${encodeURIComponent(`/deckbook:fix-task ${id}`)}` +
+    (project.localPath ? `&folder=${encodeURIComponent(project.localPath)}` : "");
 
   return (
     <>

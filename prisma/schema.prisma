@@ -25,6 +25,9 @@ model Project {
   /// строки — по убыванию важности. Пишет только владелец, агент читает
   /// её в project_info (ADR-0007).
   goal      String   @default("")
+  /// абсолютный путь к чекауту проекта на машине владельца: им кнопка
+  /// «Исправить» открывает в Claude Code нужную папку, а не последнюю
+  localPath String   @default("")
   createdAt DateTime @default(now())
 
   tokens    Token[]
