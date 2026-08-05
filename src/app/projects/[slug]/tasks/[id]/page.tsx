@@ -98,7 +98,7 @@ export default async function TaskPage({
             </>
           )}
         </p>
-        <h1 style={{ maxWidth: "24ch", marginBottom: 18 }}>{task.title}</h1>
+        <h1 style={{ marginBottom: 18 }}>{task.title}</h1>
         <Banner error={error} />
 
         <div className="bar" style={{ gap: 22, marginBottom: 30, fontSize: 14 }}>
