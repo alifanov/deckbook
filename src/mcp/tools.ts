@@ -82,6 +82,14 @@ const renderTask = (task: TaskNode | Awaited<ReturnType<typeof getTaskTree>>): u
   subtasks: task.children.map(renderTask),
 });
 
+const renderFeed = (feed: Awaited<ReturnType<typeof listComments>>) =>
+  feed.map((c) => ({
+    kind: c.kind,
+    author: c.author?.name ?? "владелец",
+    body: c.body,
+    at: c.createdAt,
+  }));
+
 const renderDoc = (node: DocumentNode): unknown => ({
   id: node.id,
   name: node.name,
@@ -143,7 +151,9 @@ export const TOOLS: Tool[] = [
   {
     name: "read_task",
     description:
-      "Читает задачу вместе со всеми подзадачами любой глубины — весь объём работы за один вызов.",
+      "Читает задачу вместе со всеми подзадачами любой глубины и лентой задачи (feed) — " +
+      "комментарии людей и агентов плюс системные записи. Весь объём работы за один вызов: " +
+      "в ленте лежат уточнения и правки постановки, читай её прежде чем браться.",
     inputSchema: {
       type: "object",
       properties: { taskId: str("идентификатор задачи") },
@@ -151,7 +161,11 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
-      return renderTask(await getTaskTree(args.taskId));
+      const [tree, feed] = await Promise.all([
+        getTaskTree(args.taskId),
+        listComments(args.taskId),
+      ]);
+      return { ...(renderTask(tree) as object), feed: renderFeed(feed) };
     },
   },
   {
@@ -342,13 +356,7 @@ export const TOOLS: Tool[] = [
     },
     run: async (args, ctx) => {
       await requireOwnTask(args.taskId, ctx);
-      const feed = await listComments(args.taskId);
-      return feed.map((c) => ({
-        kind: c.kind,
-        author: c.author?.name ?? "владелец",
-        body: c.body,
-        at: c.createdAt,
-      }));
+      return renderFeed(await listComments(args.taskId));
     },
   },
   {

@@ -53,6 +53,16 @@ describe("агент работает через MCP", () => {
     expect(created.createdByTokenId).toBe(tokenId);
   });
 
+  it("отдаёт ленту задачи прямо в read_task", async () => {
+    const task = await tool("create_task", { title: "Починить куку" });
+    await tool("comment_on_task", { taskId: task.id, body: "Уточнение: только для внутренних путей" });
+
+    const read = await tool("read_task", { taskId: task.id });
+    expect(read.feed.map((c: { body: string }) => c.body)).toContain(
+      "Уточнение: только для внутренних путей",
+    );
+  });
+
   it("создаёт задачу сразу на исполнителя, и тот видит её в my_tasks", async () => {
     const created = await tool("create_task", {
       title: "Починить скан",
