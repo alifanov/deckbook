@@ -54,7 +54,9 @@
   .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
   /* ── дорожки акторов ── */
   .view-wrap{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:14px}
-  .view-wrap.dim .lane-card, .view-wrap.dim .link{opacity:.18}
+  /* три состояния при разборе сценария: пройдено · текущий шаг · ещё впереди */
+  .view-wrap.dim .lane-card, .view-wrap.dim .link{opacity:.16}
+  .view-wrap.dim .lane-card.done, .view-wrap.dim .link.done{opacity:.62}
   .view-wrap.dim .lane-card.hl, .view-wrap.dim .link.hl{opacity:1}
   .lanes{position:relative; min-width:560px}
   .lanes-head{display:grid; margin-bottom:8px}
@@ -73,8 +75,9 @@
   .link{transition:opacity .25s}
   .link path{stroke:var(--border); stroke-width:1.5; fill:none}
   .link polygon{fill:var(--border)}
-  .link.hl path{stroke:currentColor; stroke-width:2.5}   /* цвет — актор шага, к которому ведёт */
-  .link.hl polygon{fill:currentColor}
+  .link.done path, .link.hl path{stroke:currentColor}    /* цвет — актор шага, в который ведёт */
+  .link.done polygon, .link.hl polygon{fill:currentColor}
+  .link.hl path{stroke-width:2.5}
 
   .steps{display:flex; flex-direction:column; gap:8px}
   .step{
@@ -88,7 +91,8 @@
   }
   .step h3{font-size:14px; font-weight:600; color:var(--text)}
   .step p{color:var(--muted); font-size:13px; margin-top:2px}
-  .steps.dim .step{opacity:.28}
+  .steps.dim .step{opacity:.2}
+  .steps.dim .step.done{opacity:.62}
   .steps.dim .step.hl{opacity:1}
   .step.hl{border-color:#4b5468; border-left-color:inherit}
 
@@ -437,13 +441,17 @@ function renderScenario(s){
     el.onclick = () => highlight(el.classList.contains('hl') ? -1 : +el.dataset.i));
 }
 
-/* i < 0 — снять выделение; иначе подсветить шаг i: карточку, ведущий в неё
-   соединитель (ярко, цветом актора) и запись в списке под схемой */
+/* i < 0 — снять выделение; иначе шаг i — текущий (ярко), всё до него —
+   пройдено (видно, но приглушено), всё после — ещё впереди (почти погашено) */
 function highlight(i){
   const wrap = $('viewWrap'), box = $('steps'), on = i >= 0;
   wrap.classList.toggle('dim', on); box.classList.toggle('dim', on);
   document.querySelectorAll('#viewWrap .lane-card, #viewWrap .link, #steps .step')
-    .forEach(el => el.classList.toggle('hl', on && +el.dataset.i === i));
+    .forEach(el => {
+      const k = +el.dataset.i;
+      el.classList.toggle('hl', on && k === i);
+      el.classList.toggle('done', on && k < i);
+    });
 }
 
 $('scenList').innerHTML = SCENARIOS.map(s =>
