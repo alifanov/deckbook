@@ -52,12 +52,50 @@
   .play{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px}
   .legend{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--muted)}
   .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
-  /* ── sequence-диаграмма ── */
-  .seq-wrap{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:6px 2px 2px; margin-bottom:14px}
+  /* ── переключатель вида диаграммы ── */
+  .views{display:flex; gap:6px; margin-bottom:10px}
+  .views button{
+    background:transparent; color:var(--muted); border:1px solid var(--border);
+    padding:5px 12px; border-radius:16px; font-size:12.5px; cursor:pointer;
+  }
+  .views button.on{background:var(--panel2); color:var(--text); border-color:#4b5468}
+  .view-wrap{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:14px}
+  .view-wrap.dim .msg, .view-wrap.dim .art-row, .view-wrap.dim .lane-card{opacity:.2}
+  .view-wrap.dim .msg.hl, .view-wrap.dim .art-row.hl, .view-wrap.dim .lane-card.hl{opacity:1}
+
+  /* вид «что и куда» */
+  .art{display:flex; flex-direction:column}
+  .art-row{
+    display:flex; align-items:center; gap:9px; padding:7px 6px; border-radius:8px;
+    cursor:pointer; transition:opacity .25s, background .15s; font-size:13.5px; white-space:nowrap;
+  }
+  .art-row:hover{background:var(--panel2)}
+  .art-row.hl{background:var(--panel2)}
+  .art-row .n{
+    flex:none; font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums;
+    width:18px; height:18px; line-height:17px; text-align:center; border-radius:50%; border:1px solid currentColor;
+  }
+  .art-row .who{flex:none; width:82px; color:var(--muted); font-size:12.5px; text-align:right}
+  .art-row .arr{flex:none; color:var(--muted)}
+  .art-row .dst{flex:none; font-size:11px; font-weight:600; letter-spacing:.3px; border:1px solid currentColor; border-radius:12px; padding:2px 9px}
+  .art-row .what{color:var(--text); overflow:hidden; text-overflow:ellipsis}
+
+  /* вид «дорожки» */
+  .lanes{position:relative; min-width:560px}
+  .lanes-head{display:grid; margin-bottom:8px}
+  .lanes-head span{font-size:11px; font-weight:600; letter-spacing:.4px; text-align:center}
+  .lane-row{display:grid; margin-bottom:26px}   /* зазор — место для соединителя */
+  .lane-card{
+    border:1px solid currentColor; border-radius:9px; padding:6px 10px; cursor:pointer;
+    transition:opacity .25s, background .15s; background:var(--panel2); display:flex; gap:8px; align-items:baseline;
+  }
+  .lane-card b{color:var(--text); font-size:12.5px; font-weight:600; line-height:1.3}
+  .lane-card .n{flex:none; font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums}
+  .lanes svg.links{position:absolute; inset:0; pointer-events:none}
+
+  /* вид «sequence» */
   #seq{display:block}
   #seq .msg{cursor:pointer; transition:opacity .25s}
-  #seq.dim .msg{opacity:.18}
-  #seq.dim .msg.hl{opacity:1}
   #seq .lbl{font-size:11.5px; fill:currentColor}
   #seq .msg.hl .lbl{font-weight:700}
   #seq .num{font-size:9.5px; font-weight:700; fill:var(--text)}
@@ -149,7 +187,8 @@
         <button class="play" id="playBtn">▶ Проиграть</button>
       </div>
       <div class="legend" id="legend"></div>
-      <div class="seq-wrap"><svg id="seq"></svg></div>
+      <div class="views" id="views"></div>
+      <div class="view-wrap" id="viewWrap"></div>
       <div class="steps" id="steps"></div>
     </div>
   </div>
@@ -161,6 +200,7 @@
   <div class="statuses">
     <span>todo</span><span class="a">→</span><span>in_progress</span><span class="a">→</span><span>done</span>
     <span class="a" style="margin-left:6px">или</span><span>cancelled</span>
+    <span class="a" style="margin-left:6px">·</span><span>needs_human</span><span class="a">— упёрлась в ответ владельца</span>
     <span class="a" style="margin-left:14px">приоритет: high / normal / low · normal нигде не показывается</span>
   </div>
   <div class="cards" id="entCards"></div>
@@ -230,7 +270,7 @@ const ACTORS = {
 const SCENARIOS = [
 { id:'bug', icon:'🐛', title:'Ошибка в логах прода', sub:'check-logs → задача → фикс', steps:[
   {a:'routine', t:'check-logs — ежедневно 08:03', d:'Рутина читает SigNoz: error/warn-логи и 5xx за 24 часа, сравнивает с прошлыми днями, ищет новые типы ошибок.'},
-  {a:'doc', t:'Секция «Логи (SigNoz)» в дневном логе', d:'Результат — секция в документе logs/YYYY-MM-DD в Deckbook. Даже если всё чисто.'},
+  {a:'doc', t:'Секция «Логи (SigNoz)» в дневном логе', d:'Секция в документе logs/YYYY-MM-DD — только если есть что сказать: новый тип ошибки, всплеск, стабильные 5xx. Чистые сутки лог не трогают: «ничего не изменилось» никому не нужно.'},
   {a:'task', t:'create_task на новую ошибку', d:'На каждую новую ошибку — задача: контекст, ссылка на лог, критерии приёмки. Статус todo.'},
   {a:'routine', t:'fix-task — каждый час', d:'Часовая рутина берёт первую реализуемую кодом задачу: claim_task → in_progress → комментарий «Взял в работу».'},
   {a:'code', t:'Код → PR → CI → merge', d:'Минимальный фикс без scope creep, commit, push, PR. CI зелёный — merge; красный — максимум 2 попытки починки, дальше комментарий в задачу и стоп.'},
@@ -238,14 +278,14 @@ const SCENARIOS = [
   {a:'doc', t:'Строка в «## Изменения»', d:'fix-task дописывает в дневной лог строку: задача, суть, PR. Ночью её подхватит sync-state.'},
 ]},
 { id:'deploy', icon:'🔴', title:'Упал деплой', sub:'check-deploy → critical-задача', steps:[
-  {a:'routine', t:'check-deploy — каждые 6 часов', d:'Смотрит статус последнего деплоя в Coolify. Пассивная: не редеплоит, не рестартует, ничего не чинит сама. Пока покрыт только secscanner — deckbook и pageradar в плане.'},
+  {a:'routine', t:'check-deploy — каждые 6 часов', d:'Смотрит статус последнего деплоя в Coolify. Пассивная: не редеплоит, не рестартует, ничего не чинит сама. Работает во всех шести проектах со сдвигом по минутам.'},
   {a:'task', t:'Critical-задача при красном', d:'Красный деплой → задача с приоритетом high: логи деплоя, диагноз, что проверить.'},
   {a:'routine', t:'fix-task подхватывает', d:'В ближайший часовой прогон задача уходит в работу первой — просроченные и важные разбираются раньше бессрочных.'},
   {a:'code', t:'Фикс → PR → CI → merge', d:'Чинится причина падения (сборка, миграция, конфиг), пушится, мержится после зелёного CI — Coolify деплоит заново.'},
   {a:'doc', t:'След в дневном логе', d:'Инцидент виден в логе дня: секция check-deploy + строка в «Изменения» после фикса.'},
 ]},
-{ id:'down', icon:'🕳', title:'Сайт лежит целиком', sub:'uptime-check ежечасно → critical', plan:true, steps:[
-  {a:'routine', t:'uptime-check — каждый час', d:'Деплой зелёный, но сайт не отвечает — логов нет, check-logs и check-deploy молчат. Эту дыру закрывает часовая рутина: пингует домены secscanner, deckbook, pageradar.'},
+{ id:'down', icon:'🕳', title:'Сайт лежит целиком', sub:'check-uptime ежечасно → critical', steps:[
+  {a:'routine', t:'check-uptime — каждый час', d:'Деплой зелёный, но сайт не отвечает — логов нет, check-logs и check-deploy молчат. Эту дыру закрывает часовая рутина: Uptime Kuma, при недоступности — curl. Сейчас включена в Deckbook, остальные проекты подключаются тем же кроном.'},
   {a:'task', t:'Critical-задача при дауне', d:'Сайт не ответил на проверке → critical-задача в проекте с контекстом: с какого времени, какой код ответа.'},
   {a:'routine', t:'fix-task берёт первой', d:'High-приоритет без срока — уходит в работу в ближайший часовой прогон.'},
   {a:'code', t:'Диагноз и фикс', d:'Причина (контейнер, база, сеть) → фикс → деплой. Восстановление отмечается в задаче.'},
@@ -269,21 +309,21 @@ const SCENARIOS = [
 { id:'owner', icon:'✍️', title:'Я сам поставил задачу', sub:'create_task → fix-task за час', steps:[
   {a:'owner', t:'«Создай задачу про…»', d:'Голосом через агента или в UI: create_task в нужном проекте. Можно срок и приоритет. Важно: создать задачу ≠ сделать её — агент только заводит запись.'},
   {a:'task', t:'Задача в дереве, статус todo', d:'Задача — единственная единица работы: может стать эпиком, если появятся дети. До срока агенту не показывается — её время ещё не пришло.'},
-  {a:'routine', t:'fix-task — в ближайший час', d:'Прогоны на :06 (secscanner), :37 (deckbook), :49 (pageradar). Берёт ровно одну задачу, никого не спрашивая: claim → in_progress → «Взял в работу».'},
+  {a:'routine', t:'fix-task — в ближайший час', d:'Свой часовой прогон в каждом из шести проектов, разнесённые по минутам: :06 secscanner, :16 qabot, :26 sqlformatter, :37 deckbook, :49 pageradar, :56 mailmonitor. Берёт ровно одну задачу, никого не спрашивая: claim → in_progress → «Взял в работу».'},
   {a:'code', t:'Код → PR → CI → merge', d:'Минимальная реализация по CLAUDE.md проекта, тесты, PR в основную ветку, merge после зелёного CI.'},
   {a:'task', t:'done + отчёт', d:'В ленте задачи — что изменено, файлы, ссылка на PR. Утром достаточно открыть Deckbook и прочитать.'},
   {a:'doc', t:'Строка в «## Изменения»', d:'И след в дневном логе — ночной синк учтёт изменение в state.'},
 ]},
-{ id:'veto', icon:'✋', title:'Одобрение владельца', sub:'предложение → на владельце, in_progress', plan:true, steps:[
+{ id:'veto', icon:'✋', title:'Одобрение владельца', sub:'предложение → needs_human', steps:[
   {a:'routine', t:'Аудит нашёл «предложение»', d:'check-build, check-architecture и другие аудиты отличают инцидент (баг, падение — сразу на агенте в todo) от предложения (идея, рефакторинг, оптимизация).'},
-  {a:'task', t:'Задача на владельце, статус in_progress', d:'Предложение назначается на владельца со статусом in_progress — в рабочие списки агентов оно не попадает, fix-task его не тронет.'},
+  {a:'task', t:'Задача уходит в needs_human', d:'Сразу после create_task рутина ставит статус needs_human: задача открыта и на своём агенте, но в рабочий список агентов не попадает — fix-task её не тронет, а владельцу она видна в «Моих задачах».'},
   {a:'owner', t:'Решение владельца', d:'Либо закрыть (cancelled) — идея отклонена и не пересоздаётся; либо отписать комментарий с уточнениями и перевести на агента в todo.'},
   {a:'routine', t:'fix-task берёт одобренное', d:'Задача появилась в списке агента — уходит в обычный цикл в ближайший часовой прогон, с учётом комментариев владельца.'},
   {a:'code', t:'Код → PR → CI → merge', d:'Дальше как всегда. Без решения владельца предложение не двинется — молчание больше не согласие.'},
 ]},
 { id:'orphan', icon:'🛟', title:'Задача зависла', sub:'unstick → назад в todo', steps:[
   {a:'routine', t:'fix-task обломался', d:'Два красных CI подряд или оборвалась сессия — задача осталась in_progress. fix-task берёт только todo, значит сирота висела бы вечно.'},
-  {a:'routine', t:'unstick — ежедневно 07:00', d:'Свой прогон в каждом проекте: ищет in_progress старше 24 часов без новых записей в ленте. Задачи, висящие на владельце (предложения на одобрении), в список агента не попадают и не трогаются.'},
+  {a:'routine', t:'unstick — утром, в Deckbook каждые 2 часа', d:'Ищет in_progress старше 4 часов без новых записей в ленте. Предложения на одобрении лежат в needs_human — в список агента не попадают и не трогаются.'},
   {a:'task', t:'Комментарий + назад в todo', d:'В ленту задачи — причина возврата (что сломалось, где смотреть), статус снова todo. Контекст не теряется.'},
   {a:'routine', t:'Следующий fix-task берёт заново', d:'Свежий заход с чистого листа, с учётом комментария о прошлой неудаче.'},
 ]},
@@ -313,7 +353,8 @@ const ENTITIES = [
   ['Токен','Ключ агента от одного проекта. За пределы проекта не действует.','API-ключ, credential'],
   ['Задача','Единственная единица работы. Дерево любой глубины, всегда внутри одного проекта.','тикет, issue, стори'],
   ['Эпик','Не сущность, а позиция в дереве: задача без родителя с детьми. Вычисляется, не хранится.','инициатива'],
-  ['Статус','todo, in_progress, done, cancelled. Общий набор, не настраивается.','колонка, этап'],
+  ['Статус','todo, in_progress, needs_human, done, cancelled. Общий набор, не настраивается.','колонка, этап'],
+  ['needs_human','Задача упёрлась в ответ владельца: агент дальше не идёт. Остаётся открытой и на исполнителе, но всплывает у владельца в «Моих задачах».','blocked, на согласовании, escalated'],
   ['Приоритет','high / normal / low. Срок не перебивает — разбирает задачи внутри одного срока. Normal не показывается.','severity, P0/P1'],
   ['Срок','День, когда задачу надо сделать. До срока задача агенту не показывается — её время не пришло.','дедлайн, напоминание'],
   ['Комментарий','Запись в ленте задачи: человеческий или системный. Отдельной истории изменений нет.','событие, activity'],
@@ -323,26 +364,26 @@ const ENTITIES = [
   ['Автор','Кто создал или изменил запись — человек или агент. Различие видно в каждой записи.','пользователь, актор'],
 ];
 
-/* 4-й элемент true = в плане (задача заведена, рутина ещё не работает) */
+/* 4-й элемент true = в плане (задача заведена, рутина ещё не работает).
+   Времена — по secscanner; в остальных проектах тот же крон, сдвинутый по минутам. */
 const CADENCES = [
-  ['Каждый час', [
-    [':06','fix-task · secscanner','Взять одну todo-задачу, реализовать, PR, CI, merge, done + отчёт.'],
-    [':37','fix-task · deckbook','Тот же цикл для самого Deckbook.'],
-    [':49','fix-task · pageradar','Тот же цикл для PageRadar.'],
-    ['план','uptime-check','Пинг доменов всех проектов; даун → critical-задача.', true],
+  ['Каждый час — во всех шести проектах', [
+    [':06 …:56','fix-task','Взять одну todo-задачу, реализовать, PR, CI, merge, done + отчёт. Свой прогон у каждого проекта: :06 secscanner, :16 qabot, :26 sqlformatter, :37 deckbook, :49 pageradar, :56 mailmonitor.'],
+    [':05','check-uptime · deckbook','Uptime Kuma (fallback curl); даун → critical-задача, восстановление → комментарий и закрытие. Пока подключён Deckbook.'],
   ]],
   ['Каждые 6 часов', [
-    ['*/6 ч','check-deploy · secscanner','Статус деплоя в Coolify; красный → critical-задача. Пассивная.'],
-    ['план','check-deploy · deckbook, pageradar','Та же проверка для остальных проектов — сейчас они без глаз.', true],
+    ['*/6 ч','check-deploy · все проекты','Статус деплоя в Coolify; красный → critical-задача. Пассивная — ничего не редеплоит.'],
   ]],
-  ['Ежедневно', [
+  ['Каждые 2 часа', [
+    [':10','unstick · deckbook','Порог 4 часа: in_progress без активности → комментарий + назад в todo.'],
+  ]],
+  ['Ежедневно — во всех проектах', [
     ['00:07','sync-state','Вчерашний лог → обновить state/ → завести недостающие задачи.'],
-    ['07:00','unstick · все проекты','in_progress старше суток без активности → комментарий + назад в todo. Задачи на владельце не трогает.'],
-    ['08:03','check-logs · secscanner','SigNoz: error/warn и 5xx за 24ч, новые типы ошибок → лог + задачи.'],
+    ['07:00','unstick','in_progress старше 4 часов без активности → комментарий + назад в todo. Задачи в needs_human не трогает.'],
+    ['08:03','check-logs','SigNoz: error/warn и 5xx за 24ч, новые типы ошибок → задачи. Чистые сутки в лог не пишутся.'],
     ['08:25','pulse-analytics','Детектор поломок ключевых событий. Задача только при обвале, без отчёта.'],
-    ['план','check-logs · deckbook, pageradar','Логи остальных проектов → задачи.', true],
   ]],
-  ['Еженедельно', [
+  ['Еженедельно — во всех проектах', [
     ['пн 09:03','check-funnel','Воронка, источники, активация, retention → лог + задачи на аномалии.'],
     ['пн 10:06','check-seo','GSC, техчек, ключевики DataForSEO → лог + задачи.'],
     ['пн 11:05','check-ads','Google Ads: расход, конверсии, поисковые запросы → лог + задачи.'],
@@ -351,15 +392,15 @@ const CADENCES = [
     ['ср 09:09','check-performance','SigNoz + Lighthouse mobile → лог + задачи.'],
     ['ср 10:06','check-ux','Прохождение ключевых флоу на mobile/desktop → лог + задачи.'],
     ['чт 09:10','check-docs','Дрейф state-доков против кода → лог + задачи на вводящее в заблуждение.'],
-    ['план','product-overview','Дайджест недели: сделано / нашли / ждёт решения — одним документом.', true],
+    ['план','product-overview','Дайджест недели: сделано / нашли / ждёт решения — одним документом. Единственная рутина, которой ещё нет.', true],
   ]],
   ['Ежемесячно — 1-е число', [
     ['09:00','check-build','Аудит сборки и деплоя: Docker, CI, Coolify → задачи-предложения.'],
     ['10:00','check-design','Визуальное качество против state/design → задачи на major.'],
-    ['11:00','rotate-logs','Логи старше 4 недель → _archive/logs. Крон пока называется rotate-insights — переименование в задачах.'],
+    ['11:00','rotate-logs','Логи старше 4 недель → _archive/logs.'],
   ]],
   ['Механика, не рутина', [
-    ['план','Ворота одобрения','Предложения аудитов создаются на владельце в in_progress — агенты их не видят. Владелец закрывает (cancelled) или комментирует и переводит на агента в todo. Инциденты — сразу на агенте.', true],
+    ['статус','Ворота одобрения → needs_human','Предложение аудита сразу после create_task переводится в needs_human: агентам не видно, владельцу видно в «Моих задачах». Владелец закрывает (cancelled) или комментирует и возвращает в todo. Инциденты — сразу в todo, без ворот.'],
   ]],
 ];
 
@@ -377,14 +418,27 @@ $('legend').innerHTML = Object.values(ACTORS)
 
 let timer = null;
 
-/* ── sequence-диаграмма сценария ──
-   Шаг знает только своего актора; отправитель — актор предыдущего шага
-   (первый шаг и повтор актора рисуются self-стрелкой). */
+/* Шаг в данных знает только «своего» актора — но это получатель действия
+   (документ, задача, код). Отправитель — тот, кто в этот момент действует:
+   рутина или владелец. Отсюда честные стрелки вместо «Документ → Задача». */
+const ACTIVE = {routine:1, owner:1};
+function flow(steps){
+  let doer = steps[0].a;
+  return steps.map((st,i) => {
+    const to = st.a;
+    const from = ACTIVE[to] ? (i===0 ? to : steps[i-1].a) : doer;
+    if (ACTIVE[to]) doer = to;
+    return {from, to};
+  });
+}
+
+/* ── вид 1: sequence-диаграмма ── */
 function seqSvg(steps){
   const cols = Object.keys(ACTORS).filter(k => steps.some(st => st.a===k));
   const n = cols.length, colW = Math.max(160, 660/n), W = colW*n;
   const HEAD = 40, ROW = 58, H = HEAD + steps.length*ROW + 12;
   const cx = i => colW*(i+0.5), bw = Math.min(colW-16, 132);
+  const link = flow(steps);
 
   const head = cols.map((k,i) => `
     <g>
@@ -394,8 +448,7 @@ function seqSvg(steps){
     <line x1="${cx(i)}" y1="${HEAD}" x2="${cx(i)}" y2="${H-8}" stroke="var(--border)" stroke-dasharray="4 5"/>`).join('');
 
   const msgs = steps.map((st,i) => {
-    const to = cols.indexOf(st.a);
-    const from = i===0 ? to : cols.indexOf(steps[i-1].a);
+    const to = cols.indexOf(link[i].to), from = cols.indexOf(link[i].from);
     const c = ACTORS[st.a].color, y = HEAD + i*ROW + 34;
     const fx = cx(from), tx = cx(to);
     let wire, lx, anchor;
@@ -421,50 +474,105 @@ function seqSvg(steps){
   return {w:W, h:H, html:head + msgs};
 }
 
-function renderScenario(s){
-  clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
-  document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
-  $('flowTitle').innerHTML = s.icon + ' ' + s.title + (s.plan ? planBadge : '');
-
-  const svg = $('seq'), box = $('steps');
-  const {w,h,html} = seqSvg(s.steps);
+function drawSeq(wrap, s){
+  wrap.innerHTML = '<svg id="seq"></svg>';
+  const svg = wrap.firstChild, {w,h,html} = seqSvg(s.steps);
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('width', w); svg.setAttribute('height', h);
   svg.innerHTML = html;
 
   /* подписи мерим только после вставки — иначе ширину текста не узнать */
   svg.querySelectorAll('text.lbl').forEach(t => {
-    const fit = () => {
-      const bb = t.getBBox(), x = +t.getAttribute('x');
-      if (bb.x + bb.width > w-4) t.setAttribute('x', x - (bb.x + bb.width - (w-4)));
-      else if (bb.x < 4) t.setAttribute('x', x + (4 - bb.x));
-    };
     const bb = t.getBBox();
     if (t.getAttribute('text-anchor')==='start' && bb.x + bb.width > w-4){
       t.setAttribute('text-anchor','end');               // self-подпись не влезла справа — уводим влево
       t.setAttribute('x', +t.getAttribute('x') - 60);
     }
-    fit();
+    const b2 = t.getBBox(), x = +t.getAttribute('x');
+    if (b2.x + b2.width > w-4) t.setAttribute('x', x - (b2.x + b2.width - (w-4)));
+    else if (b2.x < 4) t.setAttribute('x', x + (4 - b2.x));
   });
+}
 
-  box.innerHTML = s.steps.map((st,i) => `
+/* ── вид 2: что и куда записывается ── */
+function drawArtifacts(wrap, s){
+  const link = flow(s.steps);
+  wrap.innerHTML = `<div class="art">${s.steps.map((st,i) => {
+    const src = ACTORS[link[i].from], dst = ACTORS[st.a];
+    return `<div class="msg art-row" data-i="${i}" style="color:${dst.color}">
+      <span class="n">${i+1}</span>
+      <span class="who">${src.label}</span>
+      <span class="arr">→</span>
+      <span class="dst">${dst.label}</span>
+      <span class="what">${st.t}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* ── вид 3: дорожки акторов ── */
+function drawLanes(wrap, s){
+  const cols = Object.keys(ACTORS).filter(k => s.steps.some(st => st.a===k));
+  const grid = `grid-template-columns:repeat(${cols.length}, minmax(120px,1fr)); gap:10px`;
+  wrap.innerHTML = `<div class="lanes">
+    <div class="lanes-head" style="${grid}">${cols.map(k =>
+      `<span style="color:${ACTORS[k].color}">${ACTORS[k].label}</span>`).join('')}</div>
+    ${s.steps.map((st,i) => `<div class="lane-row" style="${grid}">
+      <div class="msg lane-card" data-i="${i}" style="grid-column:${cols.indexOf(st.a)+1}; color:${ACTORS[st.a].color}">
+        <span class="n">${i+1}</span><b>${st.t}</b>
+      </div></div>`).join('')}
+    <svg class="links"></svg>
+  </div>`;
+
+  /* соединители между карточками — координаты берём после вёрстки */
+  const lanes = wrap.querySelector('.lanes'), svg = lanes.querySelector('svg.links');
+  const cards = [...lanes.querySelectorAll('.lane-card')];
+  svg.setAttribute('width', lanes.offsetWidth); svg.setAttribute('height', lanes.offsetHeight);
+  svg.innerHTML = cards.slice(1).map((c,k) => {
+    const a = cards[k], x1 = a.offsetLeft + a.offsetWidth/2, y1 = a.offsetTop + a.offsetHeight;
+    const x2 = c.offsetLeft + c.offsetWidth/2, y2 = c.offsetTop;
+    return `<path d="M${x1} ${y1} V${(y1+y2)/2} H${x2} V${y2-5}" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+            <polygon points="${x2},${y2} ${x2-4},${y2-6} ${x2+4},${y2-6}" fill="var(--border)"/>`;
+  }).join('');
+}
+
+const VIEWS = [
+  ['art',  'Что и куда пишется', drawArtifacts],
+  ['seq',  'Sequence',           drawSeq],
+  ['lane', 'Дорожки',            drawLanes],
+];
+let view = 'art', current = null;
+
+function renderScenario(s){
+  current = s;
+  clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
+  document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
+  $('flowTitle').innerHTML = s.icon + ' ' + s.title + (s.plan ? planBadge : '');
+  document.querySelectorAll('.views button').forEach(b => b.classList.toggle('on', b.dataset.v===view));
+
+  VIEWS.find(v => v[0]===view)[2]($('viewWrap'), s);
+
+  $('steps').innerHTML = s.steps.map((st,i) => `
     <div class="step" data-i="${i}" style="border-left-color:${ACTORS[st.a].color}">
       <span class="n" style="color:${ACTORS[st.a].color}">${i+1}</span>
       <div><h3>${st.t}</h3><p>${st.d}</p></div>
     </div>`).join('');
 
   highlight(-1);
-  [...svg.querySelectorAll('.msg'), ...box.querySelectorAll('.step')].forEach(el =>
+  document.querySelectorAll('#viewWrap .msg, #steps .step').forEach(el =>
     el.onclick = () => highlight(el.classList.contains('hl') ? -1 : +el.dataset.i));
 }
 
 /* i < 0 — снять выделение; иначе подсветить шаг i и в диаграмме, и в списке */
 function highlight(i){
-  const svg = $('seq'), box = $('steps'), on = i >= 0;
-  svg.classList.toggle('dim', on); box.classList.toggle('dim', on);
-  [...svg.querySelectorAll('.msg'), ...box.querySelectorAll('.step')]
+  const wrap = $('viewWrap'), box = $('steps'), on = i >= 0;
+  wrap.classList.toggle('dim', on); box.classList.toggle('dim', on);
+  document.querySelectorAll('#viewWrap .msg, #steps .step')
     .forEach(el => el.classList.toggle('hl', on && +el.dataset.i === i));
 }
+
+$('views').innerHTML = VIEWS.map(([v,label]) => `<button data-v="${v}">${label}</button>`).join('');
+document.querySelectorAll('.views button').forEach(b =>
+  b.onclick = () => { view = b.dataset.v; renderScenario(current); });
 
 $('scenList').innerHTML = SCENARIOS.map(s =>
   `<button data-id="${s.id}" class="${s.plan?'plan':''}">${s.icon} ${s.title}${s.plan?planBadge:''}<small>${s.sub}</small></button>`).join('');
