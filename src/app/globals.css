@@ -612,7 +612,12 @@ details.reveal.drop > .pop textarea {
 .feed {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
+}
+/* линия между записями — видно, где кончается одна и начинается другая */
+.feed > * + * {
+  border-top: 1px solid var(--rule);
+  padding-top: 18px;
 }
 .feed .system {
   color: var(--muted);
