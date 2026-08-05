@@ -52,19 +52,39 @@
   .play{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px}
   .legend{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--muted)}
   .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
-  .steps{position:relative; padding-left:22px}
-  .steps::before{content:""; position:absolute; left:7px; top:14px; bottom:14px; width:2px; background:var(--border)}
-  .step{
-    position:relative; background:var(--panel); border:1px solid var(--border); border-left-width:4px;
-    border-radius:10px; padding:11px 14px; margin-bottom:10px; cursor:pointer; transition:opacity .25s, border-color .25s;
+  /* ── sequence-диаграмма ── */
+  .seq-scroll{overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px}
+  .seq{min-width:600px; padding:12px 16px 18px}
+  .seq-head{display:flex; gap:0; margin-bottom:6px}
+  .seq-head div{flex:1; text-align:center; min-width:0}
+  .seq-head span{
+    display:inline-block; font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase;
+    border:1px solid var(--border); background:var(--panel2); border-radius:14px; padding:3px 11px;
   }
-  .step::before{content:""; position:absolute; left:-21px; top:16px; width:10px; height:10px; border-radius:50%; background:var(--border)}
-  .step .chip{font-size:11px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; margin-bottom:3px}
-  .step h3{font-size:14.5px; font-weight:600}
-  .step p{color:var(--muted); font-size:13.5px; margin-top:3px}
-  .steps.playing .step{opacity:.28}
-  .steps.playing .step.hl{opacity:1}
-  .step.hl{border-color:#4b5468; border-left-color:inherit}
+  .seq-body{position:relative; padding-top:12px}
+  .lifeline{position:absolute; top:0; bottom:0; width:2px; margin-left:-1px; background:var(--border); opacity:.6}
+  .msg{position:relative; padding:4px 0 16px; cursor:pointer; transition:opacity .25s}
+  .seq.playing .msg{opacity:.22}
+  .seq.playing .msg.hl{opacity:1}
+  .msg .mrow{position:relative; min-width:150px}
+  .msg .lbl{display:flex; gap:7px; align-items:baseline; font-size:13.5px; font-weight:600; padding:0 2px 6px}
+  .msg.rtl .lbl{flex-direction:row-reverse; text-align:right}
+  .msg .lbl b{color:var(--text); font-weight:600}
+  .msg .num{
+    flex:none; font-style:normal; font-size:10.5px; font-variant-numeric:tabular-nums;
+    width:17px; height:17px; line-height:16px; text-align:center; border-radius:50%;
+    border:1px solid currentColor; color:inherit; opacity:.85;
+  }
+  .msg .wire{position:relative; height:2px; background:currentColor; opacity:.8}
+  .msg .wire::after{
+    content:""; position:absolute; right:-1px; top:-4px;
+    border-left:9px solid currentColor; border-top:5px solid transparent; border-bottom:5px solid transparent;
+  }
+  .msg.rtl .wire::after{right:auto; left:-1px; border-left:0; border-right:9px solid currentColor}
+  .msg.self .wire{height:15px; background:none; border:2px solid currentColor; border-left:none; border-radius:0 8px 8px 0}
+  .msg.self .wire::after{right:auto; left:-1px; top:auto; bottom:-5px; border-left:0; border-right:9px solid currentColor}
+  .msg .desc{color:var(--muted); font-size:13px; margin-top:7px; max-width:640px}
+  .msg.hl .lbl b{text-decoration:underline; text-decoration-color:currentColor; text-underline-offset:3px}
 
   /* ── сущности ── */
   .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px}
@@ -136,7 +156,7 @@
         <button class="play" id="playBtn">▶ Проиграть</button>
       </div>
       <div class="legend" id="legend"></div>
-      <div class="steps" id="steps"></div>
+      <div class="seq-scroll"><div class="seq" id="seq"></div></div>
     </div>
   </div>
 </section>
@@ -366,17 +386,39 @@ function renderScenario(s){
   clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Проиграть';
   document.querySelectorAll('.scen-list button').forEach(b => b.classList.toggle('on', b.dataset.id===s.id));
   $('flowTitle').innerHTML = s.icon + ' ' + s.title + (s.plan ? planBadge : '');
-  const box = $('steps');
+  const box = $('seq');
   box.classList.remove('playing');
-  box.innerHTML = s.steps.map((st,i) => {
-    const a = ACTORS[st.a];
-    return `<div class="step" data-i="${i}" style="border-left-color:${a.color}">
-      <div class="chip" style="color:${a.color}">${a.label}</div>
-      <h3>${st.t}</h3><p>${st.d}</p></div>`;
+
+  /* колонки — только те акторы, что участвуют в сценарии, в порядке ACTORS */
+  const cols = Object.keys(ACTORS).filter(k => s.steps.some(st => st.a===k));
+  const n = cols.length, cx = i => (i + 0.5) / n * 100;
+
+  const msgs = s.steps.map((st,i) => {
+    const to = cols.indexOf(st.a);
+    const from = i===0 ? to : cols.indexOf(s.steps[i-1].a);   // первый шаг — self-вызов
+    let cls = '', L, W;
+    if (from === to){ cls = 'self'; L = cx(to); W = 100/n*0.5; }
+    else { L = cx(Math.min(from,to)); W = Math.abs(cx(to) - cx(from)); cls = to < from ? 'rtl' : ''; }
+    return `<div class="msg ${cls}" data-i="${i}" style="color:${ACTORS[st.a].color}">
+      <div class="mrow" style="margin-left:${L}%; width:${W}%">
+        <div class="lbl"><i class="num">${i+1}</i><b>${st.t}</b></div>
+        <div class="wire"></div>
+      </div>
+      <p class="desc" style="margin-left:${L}%">${st.d}</p>
+    </div>`;
   }).join('');
-  box.querySelectorAll('.step').forEach(el => el.onclick = () => {
+
+  box.innerHTML =
+    `<div class="seq-head">${cols.map(k =>
+      `<div><span style="color:${ACTORS[k].color}">${ACTORS[k].label}</span></div>`).join('')}</div>
+     <div class="seq-body">${cols.map((k,i) =>
+       `<div class="lifeline" style="left:${cx(i)}%"></div>`).join('')}${msgs}</div>`;
+
+  box.querySelectorAll('.msg').forEach(el => el.onclick = () => {
     box.classList.remove('playing');
-    box.querySelectorAll('.step').forEach(x => x.classList.toggle('hl', x===el && !x.classList.contains('hl')));
+    const was = el.classList.contains('hl');
+    box.querySelectorAll('.msg').forEach(x => x.classList.remove('hl'));
+    if (!was) el.classList.add('hl');
   });
 }
 
@@ -386,7 +428,7 @@ document.querySelectorAll('.scen-list button').forEach(b =>
   b.onclick = () => renderScenario(SCENARIOS.find(s => s.id===b.dataset.id)));
 
 $('playBtn').onclick = () => {
-  const box = $('steps'), steps = [...box.querySelectorAll('.step')];
+  const box = $('seq'), steps = [...box.querySelectorAll('.msg')];
   if (timer){ clearInterval(timer); timer=null; box.classList.remove('playing');
     steps.forEach(x=>x.classList.remove('hl')); $('playBtn').textContent='▶ Проиграть'; return; }
   let i = 0;
