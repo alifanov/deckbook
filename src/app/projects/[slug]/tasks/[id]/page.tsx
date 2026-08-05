@@ -82,6 +82,9 @@ export default async function TaskPage({
     task.parentId ? getTask(task.parentId) : null,
   ]);
   const path = `/projects/${slug}/tasks/${id}`;
+  // ponytail: без ?folder — папку и ветку выбирает сам десктопный Claude Code,
+  // диплинк параметра для ветки не принимает
+  const fixHref = `claude://code/new?q=${encodeURIComponent(`/deckbook:fix-task ${id}`)}`;
 
   return (
     <>
@@ -138,6 +141,11 @@ export default async function TaskPage({
             <span className="muted">повтор {task.recurrence} дн.</span>
           )}
           <span className="spacer" />
+
+          <a className="act go" href={fixHref} title="Открыть задачу в Claude Code">
+            <Icon name="login" />
+            Исправить
+          </a>
 
           <Reveal label="Изменить" icon="pencil" tone="go" drop wide>
             <form className="row" method="post" action="/api/tasks">
