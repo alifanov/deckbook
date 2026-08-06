@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Banner } from "deckbook";
 
-// Тёмный фон системы — см. комментарий в Header.tsx.
+// Подложка карточки: страничный фон системы, см. комментарий в Head.tsx.
 const Surface = ({ children }: { children: ReactNode }) => (
   <div style={{ background: "var(--bg)", color: "var(--text)", padding: 16 }}>{children}</div>
 );

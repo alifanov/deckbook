@@ -56,27 +56,39 @@ CSS-in-JS, тем и пропсов оформления: `<button>` уже вы
 | `.icon` (на `<button>`) | квадратная кнопка 34×34 под один значок |
 | `.muted`, `.bad`, `.off` | вторичный, тревожный и погашенный текст |
 | `.crumbs` | хлебные крошки над заголовком |
-| `.prose` | длинный текст 17px с ограничением в 62ch |
 | `.error` | красная плашка ошибки (используется в `Banner`) |
 | `.notice` | зелёная плашка важного разового сообщения; `.slim` — в одну строку |
 | `.feed` | лента задачи; `.system` — служебная запись одной строкой |
 | `.steps` | нумерованные шаги шаблона; `.n` — номер |
-| `.markdown` | контейнер отрендеренного markdown |
-| `.brand`, `.inner`, `.here`, `.top` | внутренности `Header`, вручную не используются |
+| `.markdown` | контейнер отрендеренного markdown (ставит сам `Markdown`) |
+| `.top` + `.inner` | шапка страницы и её внутренний ряд — размечаются вручную, см. «Каркас страницы» |
+| `.brand` | ссылка-логотип в шапке: `<Logo />` плюс слово «Deckbook» |
+| `.here` | активная ссылка навигации; `ProjectNav` проставляет её сам |
 
 Своих имён классов не придумывать: незнакомый класс не имеет стилей вовсе.
 Нужна раскладка, которой нет в таблице, — это inline `style` с токенами.
 
 ## Каркас страницы
 
-`<Header>` живёт **снаружи** `<main>`; `<main>` сам центрируется и ограничен
+Шапка живёт **снаружи** `<main>`; `<main>` сам центрируется и ограничен
 1000px с полями по 40px. Раздел открывается компонентом `<Head>`.
 
+Готового компонента шапки в системе нет — она размечается вручную классами
+`.top` и `.inner`, как ниже. Внутрь ставится `<ProjectNav>`, `.spacer`
+раздвигает левую и правую группы.
+
 ```jsx
-const { Header, ProjectNav, Banner, Head, Icon, Reveal } = window.Deckbook;
+const { Logo, ProjectNav, Banner, Head, Icon, Reveal } = window.Deckbook;
 
 <>
-  <Header><ProjectNav slug="deckbook" at="tokens" /></Header>
+  <header className="top">
+    <div className="inner">
+      <a className="brand" href="/"><Logo />Deckbook</a>
+      <ProjectNav slug="deckbook" at="tokens" />
+      <span className="spacer" />
+      <a className="act" href="/my-tasks"><Icon name="check" />Мои задачи</a>
+    </div>
+  </header>
   <main>
     <h1>Токены</h1>
     <Banner error={error} />
@@ -109,8 +121,9 @@ const { Header, ProjectNav, Banner, Head, Icon, Reveal } = window.Deckbook;
 - `components/general/<Name>/<Name>.prompt.md` — пропсы и примеры компонента.
 - Шрифты не поставляются: системный стек `ui-sans-serif, system-ui`,
   для кода — `ui-monospace, SFMono-Regular, Menlo`.
-- Значки — `<Icon name="…" />`, штриховые 24×24 по 14px; список имён в `ui.tsx`.
+- Значки — `<Icon name="…" />`, штриховые по 14px; все 19 имён перечислены
+  в `components/general/Icon/Icon.d.ts`, а карточка `Icon` показывает набор.
 - `ConfirmButton`, `CopyField`, `CopySnippet` работают в браузере
   (`confirm()`, `navigator.clipboard`) — только на клиенте.
-- Даты: `day(date)` → «14 июля», `dueDay(date)` → то же, но для срока (UTC),
-  `moment(date)` → «2 августа, 07:12», `plural(n, …)` → «12 задач».
+- Форматтеров дат и склонений в бандле нет — только компоненты. Дату
+  форматируйте сами и передавайте готовой строкой.

@@ -3,7 +3,7 @@ import { Back } from "deckbook";
 
 // Back — скрытое поле, само по себе оно ничего не рисует. Настоящий его вид —
 // внутри формы: именно так он стоит на каждой странице приложения.
-// Тёмный фон системы — см. комментарий в Header.tsx.
+// Подложка карточки: страничный фон системы, см. комментарий в Head.tsx.
 const Surface = ({ children }: { children: ReactNode }) => (
   <div style={{ background: "var(--bg)", color: "var(--text)", padding: 16 }}>{children}</div>
 );
