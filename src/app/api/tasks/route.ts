@@ -11,6 +11,7 @@ import {
   parseDueDate,
   parsePriority,
   parseStatus,
+  requireTask,
   setDueDate,
   setPriority,
   setRecurrence,
@@ -49,6 +50,45 @@ export const POST = formHandler(async (form) => {
         OWNER,
       );
       return;
+
+    /**
+     * Правка задачи целиком: экран «Изменить» сохраняет все поля разом.
+     * Сеттеры сами молчат, когда значение не изменилось, — кроме назначения
+     * и переноса: их сравниваем здесь, иначе каждое сохранение засоряло бы
+     * ленту записями «задача перенесена» без единого изменения.
+     */
+    case "edit": {
+      const before = await requireTask(id);
+
+      await updateTask(
+        id,
+        { title: text(form, "title"), description: text(form, "description") },
+        OWNER,
+      );
+
+      const assignee = optional(form, "tokenId");
+      const assigned = before.assignedToOwner ? OWNER_ASSIGNEE : before.assigneeTokenId;
+      if (assignee !== assigned) {
+        if (assignee === OWNER_ASSIGNEE) await assignTaskToOwner(id, OWNER);
+        else await assignTask(id, assignee, OWNER);
+      }
+
+      const parentId = optional(form, "parentId");
+      if (parentId !== before.parentId) await moveTask(id, parentId, OWNER);
+
+      await setPriority(id, parsePriority(text(form, "priority")), OWNER);
+
+      const dueAt = optional(form, "dueAt");
+      await setDueDate(id, dueAt === null ? null : parseDueDate(dueAt), OWNER);
+
+      const days = optional(form, "days");
+      await setRecurrence(id, days === null ? null : Number(days), OWNER);
+
+      // статус — последним: у повторяющейся задачи закрытие переставляет срок,
+      // и переставить его должно уже по новому интервалу
+      await setStatus(id, parseStatus(text(form, "status")), OWNER);
+      return;
+    }
 
     case "status":
       await setStatus(id, parseStatus(text(form, "status")), OWNER);

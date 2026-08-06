@@ -25,7 +25,6 @@ import {
   Icon,
   Markdown,
   moment,
-  Prio,
   priorityLabel,
   ProjectNav,
   Reveal,
@@ -33,6 +32,9 @@ import {
 } from "../../../../../ui";
 
 export const dynamic = "force-dynamic";
+
+/** Удаление живёт в своей форме: вложить форму в форму правки нельзя. */
+const DELETE_FORM = "task-delete";
 
 const Subtree = ({ nodes, slug }: { nodes: TaskNode[]; slug: string }) => (
   <>
@@ -64,10 +66,10 @@ export default async function TaskPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; edit?: string }>;
 }) {
   const { slug, id } = await params;
-  const { error } = await searchParams;
+  const { error, edit } = await searchParams;
 
   const project = await getProjectBySlug(slug);
   const task = await getTask(id);
@@ -82,95 +84,71 @@ export default async function TaskPage({
     task.parentId ? getTask(task.parentId) : null,
   ]);
   const path = `/projects/${slug}/tasks/${id}`;
+  const editing = edit === "1";
   // без folder десктоп открывает папку последней сессии — то есть чужой проект.
   // ветку диплинк задать не умеет: с folder её выбрать уже не дадут
   const fixHref =
     `claude://code/new?q=${encodeURIComponent(`/deckbook:fix-task ${id}`)}` +
     (project.localPath ? `&folder=${encodeURIComponent(project.localPath)}` : "");
 
-  return (
-    <>
-      <Header>
-        <ProjectNav slug={slug} at="tasks" />
-      </Header>
-      <main>
-        <p className="crumbs">
-          <Link href={`/projects/${slug}`}>{project.name}</Link>
-          {parent && (
-            <>
-              {" / "}
-              <Link href={`/projects/${slug}/tasks/${parent.id}`}>{parent.title}</Link>
-            </>
-          )}
-        </p>
-        <h1 style={{ marginBottom: 18 }}>{task.title}</h1>
-        <Banner error={error} />
+  const crumbs = (
+    <p className="crumbs">
+      <Link href={`/projects/${slug}`}>{project.name}</Link>
+      {parent && (
+        <>
+          {" / "}
+          <Link href={`/projects/${slug}/tasks/${parent.id}`}>{parent.title}</Link>
+        </>
+      )}
+    </p>
+  );
 
-        <div className="bar" style={{ gap: 22, marginBottom: 30, fontSize: 14 }}>
-          {/* статус меняется в один клик прямо здесь: кнопка на каждый чужой статус */}
-          <form className="bar" method="post" action="/api/tasks" style={{ gap: 8 }}>
+  /* Правка — отдельный режим страницы, а не панель поверх неё: полей столько,
+     что в выпадающем окне они не помещались, а сохранялись по одному. */
+  if (editing) {
+    return (
+      <>
+        <Header>
+          <ProjectNav slug={slug} at="tasks" />
+        </Header>
+        <main>
+          {crumbs}
+
+          <form id={DELETE_FORM} method="post" action="/api/tasks" hidden>
             <Back path={path} />
-            <input type="hidden" name="intent" value="status" />
+            <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={id} />
-            <span className="bar" style={{ gap: 8 }}>
-              <Dot status={task.status} />
-              {statusLabel(task.status)}
-            </span>
-            {STATUSES.filter((s) => s !== task.status).map((s) => (
-              <button
-                key={s}
-                className="plain quick"
-                type="submit"
-                name="status"
-                value={s}
-                title={`Перевести в «${statusLabel(s)}»`}
-              >
-                {statusLabel(s)}
-              </button>
-            ))}
+            <input type="hidden" name="after" value={`/projects/${slug}`} />
           </form>
-          <span className="muted">
-            {task.assignedToOwner ? "владелец" : (task.assignee?.name ?? "ничья")}
-          </span>
-          <Prio task={task} />
-          {task.dueAt && (
-            <span className={isOverdue(task) ? "bad" : "muted"}>
-              {isOverdue(task) ? "просрочена · " : "срок "}
-              {dueDay(task.dueAt)}
-            </span>
-          )}
-          {task.recurrence !== null && (
-            <span className="muted">повтор {task.recurrence} дн.</span>
-          )}
-          <span className="spacer" />
 
-          <a className="act go" href={fixHref} title="Открыть задачу в Claude Code">
-            <Icon name="login" />
-            Исправить
-          </a>
+          <form method="post" action="/api/tasks">
+            <Back path={path} />
+            <input type="hidden" name="intent" value="edit" />
+            <input type="hidden" name="id" value={id} />
 
-          <Reveal label="Изменить" icon="pencil" tone="go" drop wide>
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="priority" />
-              <input type="hidden" name="id" value={id} />
-              <select name="priority" defaultValue={task.priority}>
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
+            <input className="title" type="text" name="title" defaultValue={task.title} required />
+            <p className="muted" style={{ margin: "0 0 22px", fontSize: 13 }}>
+              Правка задачи · изменения применяются по «Сохранить»
+            </p>
+            <Banner error={error} />
+
+            <div className="card fields pairs" style={{ padding: "14px 18px", marginBottom: 16 }}>
+              <span className="name">Статус</span>
+              <span className="seg wide">
+                {STATUSES.map((s) => (
+                  <label key={s}>
+                    <input
+                      type="radio"
+                      name="status"
+                      value={s}
+                      defaultChecked={s === task.status}
+                    />
+                    {statusLabel(s)}
+                  </label>
                 ))}
-              </select>
-              <button type="submit">
-                <Icon name="check" />
-                Приоритет
-              </button>
-            </form>
+              </span>
 
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="assign" />
-              <input type="hidden" name="id" value={id} />
+              <span className="name">Исполнитель</span>
               <select
                 name="tokenId"
                 defaultValue={
@@ -185,16 +163,17 @@ export default async function TaskPage({
                   </option>
                 ))}
               </select>
-              <button type="submit">
-                <Icon name="check" />
-                Исполнитель
-              </button>
-            </form>
 
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="move" />
-              <input type="hidden" name="id" value={id} />
+              <span className="name">Приоритет</span>
+              <select name="priority" defaultValue={task.priority}>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
+                ))}
+              </select>
+
+              <span className="name">Родитель</span>
               <select name="parentId" defaultValue={task.parentId ?? ""}>
                 <option value="">корень проекта</option>
                 {candidates
@@ -205,50 +184,156 @@ export default async function TaskPage({
                     </option>
                   ))}
               </select>
-              <button type="submit">
-                <Icon name="move" />
-                Перенести
-              </button>
-            </form>
 
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="due" />
-              <input type="hidden" name="id" value={id} />
-              <input
-                type="date"
-                name="dueAt"
-                defaultValue={task.dueAt ? asDay(task.dueAt) : ""}
-              />
-              <button type="submit">
-                <Icon name="calendar" />
-                Срок
-              </button>
-              <span className="muted">пусто — снять</span>
-            </form>
+              <span className="name">Срок</span>
+              <span className="pair">
+                <input
+                  type="date"
+                  name="dueAt"
+                  defaultValue={task.dueAt ? asDay(task.dueAt) : ""}
+                />
+                <span className="muted" style={{ fontSize: 13 }}>
+                  пусто — снять
+                </span>
+              </span>
 
-            <form className="row" method="post" action="/api/tasks">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="recurrence" />
-              <input type="hidden" name="id" value={id} />
-              <input
-                type="number"
-                name="days"
-                min={1}
-                placeholder="дней"
-                defaultValue={task.recurrence ?? ""}
-                style={{ width: 110 }}
+              <span className="name">Повтор</span>
+              <span className="pair">
+                <input
+                  type="number"
+                  name="days"
+                  min={1}
+                  placeholder="дней"
+                  defaultValue={task.recurrence ?? ""}
+                  style={{ width: 110 }}
+                />
+                <span className="muted" style={{ fontSize: 13 }}>
+                  дней от закрытия
+                </span>
+              </span>
+            </div>
+
+            <div className="card" style={{ padding: "14px 18px" }}>
+              <div className="bar" style={{ alignItems: "baseline", marginBottom: 10 }}>
+                <span className="muted">Описание</span>
+                <span className="spacer" />
+                <span className="muted" style={{ fontSize: 13 }}>
+                  markdown · предпросмотр после сохранения
+                </span>
+              </div>
+              <textarea
+                name="description"
+                defaultValue={task.description}
+                style={{ minHeight: 200 }}
               />
-              <button type="submit">
-                <Icon name="repeat" />
-                Повторять
-              </button>
-              <span className="muted">пусто — снять</span>
+              <div className="bar" style={{ gap: 16, marginTop: 16 }}>
+                <button type="submit">
+                  <Icon name="check" />
+                  Сохранить
+                </button>
+                <Link className="act" href={path}>
+                  <Icon name="x" />
+                  Отмена
+                </Link>
+                <span className="spacer" />
+                <ConfirmButton
+                  form={DELETE_FORM}
+                  message="Удалить задачу вместе со всеми подзадачами и лентой?"
+                >
+                  <Icon name="trash" />
+                  Удалить задачу
+                </ConfirmButton>
+              </div>
+            </div>
+          </form>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header>
+        <ProjectNav slug={slug} at="tasks" />
+      </Header>
+      <main>
+        {crumbs}
+        <h1 style={{ marginBottom: 18 }}>{task.title}</h1>
+        <Banner error={error} />
+
+        <div
+          className="card"
+          style={{
+            padding: "16px 22px",
+            marginBottom: 36,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            fontSize: 14,
+          }}
+        >
+          <div className="bar" style={{ gap: 20 }}>
+            <span className="bar muted" style={{ gap: 22 }}>
+              <span>
+                исполнитель{" "}
+                <span style={{ color: "var(--text)" }}>
+                  {task.assignedToOwner ? "владелец" : (task.assignee?.name ?? "ничья")}
+                </span>
+              </span>
+              <span>
+                приоритет{" "}
+                <span className={task.priority === "high" ? "bad" : undefined}>
+                  {priorityLabel(task.priority)}
+                </span>
+              </span>
+              {task.dueAt && (
+                <span>
+                  срок{" "}
+                  <span className={isOverdue(task) ? "bad" : undefined}>
+                    {dueDay(task.dueAt)}
+                    {isOverdue(task) && " · просрочена"}
+                  </span>
+                </span>
+              )}
+              {task.recurrence !== null && <span>повтор {task.recurrence} дн.</span>}
+            </span>
+            <span className="spacer" />
+
+            <a className="act go" href={fixHref} title="Открыть задачу в Claude Code">
+              <Icon name="login" />
+              Исправить
+            </a>
+            <Link className="act go" href={`${path}?edit=1`}>
+              <Icon name="pencil" />
+              Изменить
+            </Link>
+          </div>
+
+          {/* статус меняется в один клик прямо здесь: соседние значения рядом */}
+          <div className="bar rule" style={{ gap: 12 }}>
+            <span className="muted">Статус</span>
+            <form className="seg" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="status" />
+              <input type="hidden" name="id" value={id} />
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  className={s === task.status ? `on ${s}` : undefined}
+                  type="submit"
+                  name="status"
+                  value={s}
+                  title={`Перевести в «${statusLabel(s)}»`}
+                >
+                  {statusLabel(s)}
+                </button>
+              ))}
             </form>
-          </Reveal>
+            <span className="muted">переключается в один клик, без подтверждения</span>
+          </div>
         </div>
 
-        <div className="card" style={{ marginBottom: 36 }}>
+        <div className="card" style={{ padding: "14px 18px", marginBottom: 36 }}>
           {task.description ? (
             <Markdown text={task.description} />
           ) : (
@@ -259,34 +344,20 @@ export default async function TaskPage({
 
           <div className="bar rule">
             <span className="muted">
-              Создал{" "}
-              {task.createdBy ? `агент ${task.createdBy.name}` : "владелец"} ·{" "}
+              Создал {task.createdBy ? `агент ${task.createdBy.name}` : "владелец"} ·{" "}
               {moment(task.createdAt)}
             </span>
             <span className="spacer" />
-            <Reveal label="Редактировать" icon="pencil" tone="go" drop wide>
-              <form method="post" action="/api/tasks">
-                <Back path={path} />
-                <input type="hidden" name="intent" value="update" />
-                <input type="hidden" name="id" value={id} />
-                <div className="row" style={{ marginBottom: 10 }}>
-                  <input type="text" name="title" defaultValue={task.title} required />
-                </div>
-                <textarea name="description" defaultValue={task.description} />
-                <div className="row" style={{ marginTop: 10 }}>
-                  <button type="submit">
-                    <Icon name="check" />
-                    Сохранить
-                  </button>
-                </div>
-              </form>
-            </Reveal>
+            <Link className="act go" href={`${path}?edit=1`}>
+              <Icon name="pencil" />
+              Редактировать
+            </Link>
           </div>
         </div>
 
         <Head title="Подзадачи" count={tree.children.length}>
           <Reveal label="подзадача" icon="plus" drop>
-            <form className="row" method="post" action="/api/tasks">
+            <form className="pill" method="post" action="/api/tasks">
               <Back path={path} />
               <input type="hidden" name="intent" value="create" />
               <input type="hidden" name="projectId" value={project.id} />
@@ -309,7 +380,7 @@ export default async function TaskPage({
         )}
 
         <Head title="Лента" count={feed.length} />
-        <div className="card">
+        <div className="card" style={{ padding: "14px 18px" }}>
           {feed.length === 0 ? (
             <p className="muted" style={{ margin: 0 }}>
               Записей пока нет.
@@ -335,7 +406,7 @@ export default async function TaskPage({
           )}
 
           <form
-            className="row"
+            className="pill"
             method="post"
             action="/api/tasks"
             style={{ marginTop: feed.length === 0 ? 16 : 22 }}

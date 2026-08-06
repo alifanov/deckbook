@@ -21,7 +21,7 @@
     "ProjectNav": "  /** Слаг проекта: из него строятся адреса всех четырёх разделов. */\n  slug: string;",
     "Banner": "  /** Текст ошибки. Пусто или undefined — баннер не рендерится вовсе. */\n  error?: string;",
     "Back": "  /** Адрес, на который POST-обработчик вернёт пользователя после действия. */\n  path: string;",
-    "ConfirmButton": "  /** Подпись кнопки. */\n  children: React.ReactNode;\n  /** Вопрос в нативном confirm(): отмена гасит submit формы. */\n  message: string;",
+    "ConfirmButton": "  /** Подпись кнопки. */\n  children: React.ReactNode;\n  /** Вопрос в нативном confirm(): отмена гасит submit формы. */\n  message: string;\n  /** id формы, если кнопка стоит не внутри неё: вложить форму в форму нельзя. */\n  form?: string;",
     "CopyField": "  /** Значение в однострочном поле; клик по кнопке кладёт его в буфер. */\n  value: string;",
     "CopySnippet": "  /** Многострочный текст в <pre>; клик по кнопке кладёт его в буфер. */\n  value: string;"
   },

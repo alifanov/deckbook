@@ -6,6 +6,9 @@ src/generated/
 *.tsbuildinfo
 next-env.d.ts
 
+# состояние харнесса: конфиг запуска и рабочие worktree
+.claude/
+
 # design-sync: staged scripts + regenerated output + machine state
 .ds-sync/
 ds-bundle/

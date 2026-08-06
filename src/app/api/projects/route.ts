@@ -16,12 +16,13 @@ export const POST = formHandler(async (form) => {
     case "rename":
       await renameProject(text(form, "id"), text(form, "name"));
       return;
-    case "goal":
-      await setProjectGoal(text(form, "id"), text(form, "goal"));
+    // цель и папка правятся одной формой — и сохраняются одной кнопкой
+    case "meta": {
+      const id = text(form, "id");
+      await setProjectGoal(id, text(form, "goal"));
+      await setProjectLocalPath(id, text(form, "localPath"));
       return;
-    case "local-path":
-      await setProjectLocalPath(text(form, "id"), text(form, "localPath"));
-      return;
+    }
     case "delete":
       await deleteProject(text(form, "id"));
       return "/";

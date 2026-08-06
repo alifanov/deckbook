@@ -67,7 +67,7 @@ export default async function DocumentPage({
                 </p>
                 <Banner error={error} />
 
-                <div className="card" style={{ padding: "20px 24px" }}>
+                <div className="card" style={{ padding: "14px 18px" }}>
                   <form method="post" action="/api/documents">
                     <Back path={path} />
                     <input type="hidden" name="intent" value="write" />
@@ -112,7 +112,7 @@ export default async function DocumentPage({
                 ) : document.content.trim() === "" ? (
                   <p className="muted">Документ пуст.</p>
                 ) : (
-                  <div className="card" style={{ padding: "28px 32px" }}>
+                  <div className="card" style={{ padding: "18px 22px" }}>
                     <Markdown text={document.content} />
                   </div>
                 )}
@@ -121,7 +121,7 @@ export default async function DocumentPage({
 
             <div className="bar" style={{ gap: 20, marginTop: 22 }}>
               <Reveal label="Переименовать" icon="pencil" drop>
-                <form className="row" method="post" action="/api/documents">
+                <form className="pill" method="post" action="/api/documents">
                   <Back path={path} />
                   <input type="hidden" name="intent" value="rename" />
                   <input type="hidden" name="id" value={id} />

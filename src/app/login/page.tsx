@@ -19,7 +19,7 @@ export default async function LoginPage({
 
         <div className="card" style={{ padding: "22px 24px" }}>
           <Banner error={error} />
-          <form className="row" method="post" action="/api/session">
+          <form className="pill" method="post" action="/api/session">
             <input type="hidden" name="intent" value="login" />
             <input
               type="password"

@@ -31,8 +31,9 @@ export default async function DocumentsPage({
   const tree = await listDocumentTree(project.id);
   const path = `/projects/${slug}/documents`;
 
-  const folderSelect = (
-    <select name="parentId" defaultValue="">
+  // выбор папки стоит под оправой, а не в ней: form= связывает его со своей формой
+  const folderSelect = (form: string) => (
+    <select form={form} name="parentId" defaultValue="" style={{ flex: 1, minWidth: 0 }}>
       <option value="">в корне</option>
       {folders(tree).map((folder) => (
         <option key={folder.id} value={folder.id}>
@@ -62,46 +63,73 @@ export default async function DocumentsPage({
               Выберите файл слева — содержимое откроется здесь.
             </p>
 
-            <div className="card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <form className="row" method="post" action="/api/documents">
-                <Back path={path} />
-                <input type="hidden" name="projectId" value={project.id} />
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Название документа или папки"
-                  required
-                />
-                <select name="intent" defaultValue="create-document">
-                  <option value="create-document">документ</option>
-                  <option value="create-folder">папка</option>
-                </select>
-                {folderSelect}
-                <button type="submit">
-                  <Icon name="plus" />
-                  Создать
-                </button>
-              </form>
+            {/* создание и загрузка — два действия одной формы страницы:
+                подпись слева, поля справа, каждое со своей оправой */}
+            <div
+              className="card fields"
+              style={{ padding: "14px 18px", "--label": "88px" } as React.CSSProperties}
+            >
+              <span className="name" style={{ alignSelf: "start", paddingTop: 9 }}>
+                Создать
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <form className="pill" method="post" action="/api/documents" id="doc-create">
+                  <Back path={path} />
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Название документа или папки"
+                    required
+                  />
+                  <button type="submit">
+                    <Icon name="plus" />
+                    Создать
+                  </button>
+                </form>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <select
+                    form="doc-create"
+                    name="intent"
+                    defaultValue="create-document"
+                    style={{ flex: 1, minWidth: 0 }}
+                  >
+                    <option value="create-document">документ</option>
+                    <option value="create-folder">папка</option>
+                  </select>
+                  {folderSelect("doc-create")}
+                </div>
+              </div>
 
-              <form
-                className="row"
-                method="post"
-                action="/api/documents"
-                encType="multipart/form-data"
-              >
-                <Back path={path} />
-                <input type="hidden" name="intent" value="import" />
-                <input type="hidden" name="projectId" value={project.id} />
-                <input type="file" name="files" accept=".md,.txt" multiple required />
-                {folderSelect}
-                <button className="plain" type="submit">
-                  <Icon name="upload" />
-                  Загрузить .md или .txt
-                </button>
-                <span className="muted">
-                  содержимое становится документом, сам файл нигде не сохраняется
-                </span>
-              </form>
+              <span className="sep" />
+
+              <span className="name" style={{ alignSelf: "start", paddingTop: 9 }}>
+                Загрузить
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <form
+                  className="pill"
+                  method="post"
+                  action="/api/documents"
+                  encType="multipart/form-data"
+                  id="doc-import"
+                >
+                  <Back path={path} />
+                  <input type="hidden" name="intent" value="import" />
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input type="file" name="files" accept=".md,.txt" multiple required />
+                  <button type="submit">
+                    <Icon name="upload" />
+                    Загрузить
+                  </button>
+                </form>
+                {folderSelect("doc-import")}
+              </div>
+
+              <span />
+              <span className="muted" style={{ fontSize: 13 }}>
+                Содержимое становится документом, сам файл нигде не сохраняется.
+              </span>
             </div>
           </section>
         </div>
