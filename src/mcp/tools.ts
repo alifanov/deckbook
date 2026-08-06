@@ -149,6 +149,37 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: "project_tasks",
+    description:
+      "Все задачи проекта — и свои, и чужие, и ничьи, вместе с отложенными на будущее. " +
+      "Это опись, а не рабочий список: работу бери из my_tasks, а сюда ходи, чтобы узнать, " +
+      "что в проекте уже заведено — прежде всего перед create_task, чтобы не завести дубль. " +
+      "У каждой задачи видно assignee: имя агента, «владелец» или null — значит, задача ничья.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        status: str("необязательный фильтр: todo, in_progress, needs_human, done, cancelled"),
+        priority: str("необязательный фильтр: high, normal, low"),
+      },
+    },
+    run: async (args, ctx) => {
+      const tasks = await listTasks(ctx.projectId, {
+        ...(args.status ? { status: parseStatus(args.status) } : {}),
+        ...(args.priority ? { priority: parsePriority(args.priority) } : {}),
+        // опись показывает и отложенное: дубль заводится и на ненаступивший срок
+        includeFuture: true,
+      });
+      return tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        assignee: t.assignee?.name ?? (t.assignedToOwner ? "владелец" : null),
+        ...prio(t),
+        ...due(t),
+      }));
+    },
+  },
+  {
     name: "read_task",
     description:
       "Читает задачу вместе со всеми подзадачами любой глубины и лентой задачи (feed) — " +

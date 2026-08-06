@@ -116,6 +116,24 @@ describe("агент работает через MCP", () => {
     expect((await tool("my_tasks")).map((t: { id: string }) => t.id)).toEqual([mine.id]);
   });
 
+  it("показывает в описи проекта ничьи и чужие задачи, а my_tasks оставляет своим", async () => {
+    const orphan = await createTask({ projectId, title: "Ничья" }, OWNER);
+    const other = await makeToken(projectId, "Дневной агент");
+    await createTask({ projectId, title: "Чужая", assigneeTokenId: other.token.id }, OWNER);
+    await createTask({ projectId, title: "Отложенная", dueAt: new Date("2030-09-01") }, OWNER);
+
+    const all = await tool("project_tasks", { status: "todo" });
+    expect(all.map((t: { title: string }) => t.title).sort()).toEqual([
+      "Ничья",
+      "Отложенная",
+      "Чужая",
+    ]);
+    expect(all.find((t: { id: string }) => t.id === orphan.id).assignee).toBeNull();
+    expect(all.find((t: { title: string }) => t.title === "Чужая").assignee).toBe("Дневной агент");
+
+    expect(await tool("my_tasks")).toEqual([]);
+  });
+
   it("меняет статус и не может изобрести свой", async () => {
     const task = await createTask({ projectId, title: "Задача" }, OWNER);
 
