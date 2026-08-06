@@ -8,25 +8,38 @@
   "cssEntry": "src/app/globals.css",
   "readmeHeader": ".design-sync/conventions.md",
   "componentSrcMap": {
-    "Header": "src/ui.tsx",
     "ProjectNav": "src/ui.tsx",
     "Banner": "src/ui.tsx",
     "Back": "src/ui.tsx",
+    "Head": "src/ui.tsx",
+    "Reveal": "src/ui.tsx",
+    "Icon": "src/ui.tsx",
+    "Logo": "src/ui.tsx",
+    "Dot": "src/ui.tsx",
+    "Prio": "src/ui.tsx",
+    "Markdown": "src/ui.tsx",
     "ConfirmButton": "src/confirm.tsx",
     "CopyField": "src/copy.tsx",
     "CopySnippet": "src/copy.tsx"
   },
   "dtsPropsFor": {
-    "Header": "  /** Содержимое между брендом и кнопкой «Выйти» — обычно <ProjectNav />. */\n  children?: React.ReactNode;",
-    "ProjectNav": "  /** Слаг проекта: из него строятся адреса всех четырёх разделов. */\n  slug: string;",
+    "ProjectNav": "  /** Слаг проекта: из него строятся адреса всех трёх разделов. */\n  slug: string;\n  /** Текущий раздел — его ссылка получает класс `here`. */\n  at: \"tasks\" | \"documents\" | \"tokens\";",
     "Banner": "  /** Текст ошибки. Пусто или undefined — баннер не рендерится вовсе. */\n  error?: string;",
     "Back": "  /** Адрес, на который POST-обработчик вернёт пользователя после действия. */\n  path: string;",
-    "ConfirmButton": "  /** Подпись кнопки. */\n  children: React.ReactNode;\n  /** Вопрос в нативном confirm(): отмена гасит submit формы. */\n  message: string;",
+    "Head": "  /** Название раздела — рендерится как <h2>. */\n  title: string;\n  /** Счётчик рядом с названием, приглушённым текстом. */\n  count?: React.ReactNode;\n  /** Действия, прижатые к правому краю. */\n  children?: React.ReactNode;",
+    "Reveal": "  /** Подпись действия: видна в покое, при `bare` уходит в title и aria-label. */\n  label: string;\n  /** Значок слева от подписи. */\n  icon?: \"plus\" | \"check\" | \"x\" | \"pencil\" | \"trash\" | \"filter\" | \"down\" | \"right\" | \"send\" | \"copy\" | \"upload\" | \"move\" | \"layers\" | \"ban\" | \"swap\" | \"login\" | \"logout\" | \"calendar\" | \"repeat\";\n  /** Окраска действия: `go` — утвердительное, `bad` — разрушительное. */\n  tone?: \"go\" | \"bad\";\n  /** Раскрыться поверх раскладки, а не раздвинуть её. */\n  drop?: boolean;\n  /** Широкая раскрытая панель. */\n  wide?: boolean;\n  /** Только значок: подпись уходит в title и aria-label. */\n  bare?: boolean;\n  /** Содержимое раскрытой панели — обычно форма. */\n  children: React.ReactNode;",
+    "Icon": "  /** Имя глифа из набора. */\n  name: \"plus\" | \"check\" | \"x\" | \"pencil\" | \"trash\" | \"filter\" | \"down\" | \"right\" | \"send\" | \"copy\" | \"upload\" | \"move\" | \"layers\" | \"ban\" | \"swap\" | \"login\" | \"logout\" | \"calendar\" | \"repeat\";\n  /** Сторона квадрата в пикселях. По умолчанию 14. */\n  size?: number;",
+    "Logo": "  /** Сторона квадрата в пикселях. По умолчанию 18. */\n  size?: number;",
+    "Dot": "  /** Статус задачи: он и задаёт цвет точки. */\n  status: \"todo\" | \"in_progress\" | \"needs_human\" | \"done\" | \"cancelled\";",
+    "Prio": "  /** Задача, у которой берётся приоритет. `normal` не рендерится вовсе. */\n  task: { priority: \"high\" | \"normal\" | \"low\" };",
+    "Markdown": "  /** Исходный markdown. HTML в нём остаётся текстом, а не разметкой. */\n  text: string;",
+    "ConfirmButton": "  /** Подпись кнопки. */\n  children: React.ReactNode;\n  /** Вопрос в нативном confirm(): отмена гасит submit формы. */\n  message: string;\n  /** Классы кнопки. По умолчанию `act bad`. */\n  className?: string;\n  /** Подпись для кнопки без текста — уходит в title и aria-label. */\n  label?: string;",
     "CopyField": "  /** Значение в однострочном поле; клик по кнопке кладёт его в буфер. */\n  value: string;",
     "CopySnippet": "  /** Многострочный текст в <pre>; клик по кнопке кладёт его в буфер. */\n  value: string;"
   },
   "overrides": {
-    "Header": { "cardMode": "column" },
-    "ProjectNav": { "cardMode": "column" }
+    "ProjectNav": { "cardMode": "column" },
+    "CopyField": { "cardMode": "column" },
+    "Reveal": { "cardMode": "column" }
   }
 }

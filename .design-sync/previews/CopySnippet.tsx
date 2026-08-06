@@ -4,7 +4,7 @@ import { CopySnippet } from "deckbook";
 const URL = "https://deckbook.example/mcp/deckbook";
 const TOKEN = "dbk_7f3c1a9e42b58d06ac1e5f7b9d2340cc";
 
-// Тёмный фон системы — см. комментарий в Header.tsx.
+// Подложка карточки: страничный фон системы, см. комментарий в Head.tsx.
 const Surface = ({ children }: { children: ReactNode }) => (
   <div style={{ background: "var(--bg)", color: "var(--text)", padding: 16 }}>{children}</div>
 );

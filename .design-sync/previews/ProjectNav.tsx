@@ -1,25 +1,53 @@
 import type { ReactNode } from "react";
-import { Header, ProjectNav } from "deckbook";
+import { Icon, Logo, ProjectNav } from "deckbook";
 
-// Тёмный фон системы — см. комментарий в Header.tsx.
+// Подложка карточки: страничный фон системы, см. комментарий в Head.tsx.
 const Surface = ({ children }: { children: ReactNode }) => (
   <div style={{ background: "var(--bg)", color: "var(--text)" }}>{children}</div>
 );
 
-/** Единственное настоящее место навигации — внутри <Header>. */
-export const InHeader = () => (
+/**
+ * Навигация живёт только внутри шапки: промежутки между ссылками задаёт
+ * `.top .inner`, вне его ссылки слипаются. Сам <Header> в дизайн-систему не
+ * входит (async-серверный, ходит в базу), поэтому его разметка повторена
+ * здесь вручную — это оправа для превью, а не компонент системы.
+ */
+const Frame = ({ children }: { children: ReactNode }) => (
   <Surface>
-    <Header>
-      <ProjectNav slug="deckbook" />
-    </Header>
+    <header className="top">
+      <div className="inner">
+        <a className="brand" href="/">
+          <Logo />
+          Deckbook
+        </a>
+        {children}
+        <span className="spacer" />
+        <a className="act" href="/my-tasks">
+          <Icon name="check" />
+          Мои задачи (3)
+        </a>
+      </div>
+    </header>
   </Surface>
 );
 
-/** Сами ссылки, без шапки: четыре раздела проекта в порядке следования. */
-export const Bare = () => (
-  <Surface>
-    <div style={{ display: "flex", gap: 16, padding: 16 }}>
-      <ProjectNav slug="deckbook" />
-    </div>
-  </Surface>
+/** Раздел «Задачи» — то, что видно сразу после перехода в проект. */
+export const OnTasks = () => (
+  <Frame>
+    <ProjectNav slug="deckbook" at="tasks" />
+  </Frame>
+);
+
+/** Раздел «Документы»: класс `here` переезжает на вторую ссылку. */
+export const OnDocuments = () => (
+  <Frame>
+    <ProjectNav slug="deckbook" at="documents" />
+  </Frame>
+);
+
+/** Раздел «Токены» — последний из трёх. */
+export const OnTokens = () => (
+  <Frame>
+    <ProjectNav slug="deckbook" at="tokens" />
+  </Frame>
 );
