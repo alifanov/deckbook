@@ -1,5 +1,6 @@
 import { requestSignedIn } from "./auth";
 import { DomainError } from "./domain/errors";
+import { logError } from "./log";
 
 /** ponytail: относительный Location — за проксей и с проброшенным портом
  * абсолютный адрес указал бы на внутренний порт контейнера. */
@@ -30,7 +31,12 @@ export function formHandler(
     try {
       return redirect((await action(form)) || back);
     } catch (error) {
-      if (!(error instanceof DomainError)) throw error;
+      if (!(error instanceof DomainError)) {
+        // отказ домена — часть сценария, а поломка route handler'а видна
+        // только здесь: дальше Next вернёт 500 и ошибка потеряется
+        logError(error, { "http.route": new URL(request.url).pathname });
+        throw error;
+      }
       const separator = back.includes("?") ? "&" : "?";
       return redirect(`${back}${separator}error=${encodeURIComponent(error.message)}`);
     }

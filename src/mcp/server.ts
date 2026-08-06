@@ -1,6 +1,7 @@
 import { agent } from "../domain/author";
 import { DomainError } from "../domain/errors";
 import { authenticateToken } from "../domain/tokens";
+import { logError } from "../log";
 import { TOOLS, type McpContext } from "./tools";
 
 // ponytail: JSON-RPC поверх одного POST — SSE и сессии MCP-серверу без
@@ -90,7 +91,9 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
         // отказ домена — ответ инструмента, а не поломка протокола:
         // агент должен прочитать причину и исправиться
         const message = error instanceof DomainError ? error.message : "Внутренняя ошибка";
-        if (!(error instanceof DomainError)) console.error(error);
+        if (!(error instanceof DomainError)) {
+          logError(error, { "mcp.tool": tool.name, "mcp.project": ctx.projectSlug });
+        }
         return ok(rpc.id, { content: [{ type: "text", text: message }], isError: true });
       }
     }
