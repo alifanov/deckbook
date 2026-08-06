@@ -53,7 +53,7 @@ export default async function MyTasksPage({
             {includeFuture ? "На вас ничего не назначено." : "Сейчас делать нечего."}
           </p>
         ) : (
-          <div className="card tight list">
+          <div className="card tight list cols">
             {tasks.map((task) => (
               <div className={`item ${task.status}`} key={task.id}>
                 <Dot status={task.status} />
@@ -66,14 +66,19 @@ export default async function MyTasksPage({
                 <Link href={`/projects/${task.project.slug}`} className="muted">
                   {task.project.name}
                 </Link>
-                <Prio task={task} />
-                {task.dueAt &&
-                  (isOverdue(task) ? (
-                    <span className="bad">просрочена · {dueDay(task.dueAt)}</span>
-                  ) : (
-                    <span className="muted">срок {dueDay(task.dueAt)}</span>
-                  ))}
-                <span className="muted">{statusLabel(task.status)}</span>
+                {/* пустые ячейки нужны колонкам: без них соседи съезжают влево */}
+                <span>
+                  <Prio task={task} />
+                </span>
+                <span>
+                  {task.dueAt &&
+                    (isOverdue(task) ? (
+                      <span className="bad">просрочена · {dueDay(task.dueAt)}</span>
+                    ) : (
+                      <span className="muted">срок {dueDay(task.dueAt)}</span>
+                    ))}
+                </span>
+                <span className="muted state">{statusLabel(task.status)}</span>
               </div>
             ))}
           </div>

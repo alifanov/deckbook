@@ -28,12 +28,14 @@ import {
   plural,
   Prio,
   ProjectNav,
-  Reveal,
   statusLabel,
 } from "../../../ui";
 import { Tiles } from "./tiles";
 
 export const dynamic = "force-dynamic";
+
+/** Подпись строк «Цель» и «Папка»: одна колонка и в чтении, и в правке. */
+const LABEL = { width: 54, flex: "none" } as const;
 
 /** Срок и приговор по нему — одинаково в дереве и в отобранном списке. */
 const Due = ({ task }: { task: { dueAt: Date | null } }) =>
@@ -136,9 +138,10 @@ export default async function ProjectTasksPage({
     status?: string;
     assignee?: string;
     closed?: string;
+    meta?: string;
   }>;
 }) {
-  const { error, status, assignee, closed } = await searchParams;
+  const { error, status, assignee, closed, meta } = await searchParams;
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
   if (!project) notFound();
@@ -170,6 +173,7 @@ export default async function ProjectTasksPage({
   const counts = await countByStatus(project.id);
   const flow = await dailyFlow(project.id);
   const path = `/projects/${slug}`;
+  const editingMeta = meta === "1";
 
   return (
     <>
@@ -183,53 +187,90 @@ export default async function ProjectTasksPage({
         </div>
 
         {/* цель работает, только пока мозолит глаза — потому под заголовком,
-            а не на отдельной странице настроек */}
-        <div className="bar" style={{ alignItems: "baseline", gap: 10, marginBottom: 22 }}>
-          {project.goal ? (
-            <span style={{ whiteSpace: "pre-wrap" }}>{project.goal}</span>
-          ) : (
-            <span className="muted">Цель не задана</span>
-          )}
-          <span className="spacer" />
-          <Reveal label="Цель" drop wide>
-            <form method="post" action="/api/projects">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="goal" />
-              <input type="hidden" name="id" value={project.id} />
+            а не на отдельной странице настроек. Путь к чекауту нужен только
+            кнопке «Исправить» на задаче, потому живёт тут же, а не в настройках */}
+        {editingMeta ? (
+          <form
+            method="post"
+            action="/api/projects"
+            style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}
+          >
+            <Back path={path} />
+            <input type="hidden" name="intent" value="meta" />
+            <input type="hidden" name="id" value={project.id} />
+            <div className="bar" style={{ alignItems: "flex-start" }}>
+              <span className="muted" style={{ ...LABEL, paddingTop: 9 }}>
+                Цель
+              </span>
               <textarea
                 name="goal"
                 defaultValue={project.goal}
                 placeholder="К чему проект должен прийти. Строкой на цель, важное — выше"
+                style={{
+                  minHeight: 80,
+                  padding: "8px 12px",
+                  // цель — фраза, а не код: моноширинный шрифт тут ни к чему
+                  fontFamily: "inherit",
+                  fontSize: 15,
+                  lineHeight: 1.6,
+                }}
               />
-              <div className="row" style={{ marginTop: 10 }}>
-                <button type="submit">
-                  <Icon name="check" />
-                  Сохранить
-                </button>
-              </div>
-            </form>
-          </Reveal>
-          {/* путь к чекауту нужен только кнопке «Исправить» на задаче — потому
-              рядом с целью, а не в отдельных настройках проекта */}
-          <Reveal label="Папка" drop wide>
-            <form className="row" method="post" action="/api/projects">
-              <Back path={path} />
-              <input type="hidden" name="intent" value="local-path" />
-              <input type="hidden" name="id" value={project.id} />
+            </div>
+            <div className="bar">
+              <span className="muted" style={LABEL}>
+                Папка
+              </span>
               <input
                 type="text"
+                className="mono"
                 name="localPath"
                 defaultValue={project.localPath}
                 placeholder="/Users/you/code/project"
+                style={{ flex: 1, fontSize: 13 }}
               />
+            </div>
+            <div className="bar" style={{ gap: 16, paddingLeft: 66, marginTop: 2 }}>
               <button type="submit">
                 <Icon name="check" />
                 Сохранить
               </button>
+              <Link className="act" href={path}>
+                <Icon name="x" />
+                Отмена
+              </Link>
               <span className="muted">пусто — снять</span>
-            </form>
-          </Reveal>
-        </div>
+            </div>
+          </form>
+        ) : (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}
+          >
+            <div className="bar" style={{ alignItems: "baseline" }}>
+              <span className="muted" style={LABEL}>
+                Цель
+              </span>
+              {project.goal ? (
+                <span style={{ flex: 1, whiteSpace: "pre-wrap" }}>{project.goal}</span>
+              ) : (
+                <span className="muted" style={{ flex: 1 }}>
+                  Цель не задана
+                </span>
+              )}
+              <Link className="act" href={`${path}?meta=1`}>
+                <Icon name="pencil" />
+                Изменить
+              </Link>
+            </div>
+            <div className="bar" style={{ alignItems: "baseline" }}>
+              <span className="muted" style={LABEL}>
+                Папка
+              </span>
+              <span className="mono muted" style={{ flex: 1, fontSize: 13 }}>
+                {project.localPath || "не задана"}
+              </span>
+            </div>
+          </div>
+        )}
         <Banner error={error} />
 
         {/* сводка идёт до фильтров: считает она весь проект, а кликом задаёт отбор */}
@@ -297,7 +338,7 @@ export default async function ProjectTasksPage({
           {/* под фильтром места на строке уже нет, да и создавать некуда:
               новая задача всё равно не попадёт в отобранное */}
           {!filtering && (
-            <form className="row" method="post" action="/api/tasks">
+            <form className="pill" method="post" action="/api/tasks">
               <Back path={path} />
               <input type="hidden" name="intent" value="create" />
               <input type="hidden" name="projectId" value={project.id} />
@@ -306,7 +347,7 @@ export default async function ProjectTasksPage({
                 name="title"
                 placeholder="Новая задача"
                 required
-                style={{ flex: "none", width: 220, minWidth: 0 }}
+                style={{ flex: "none", width: 220 }}
               />
               <button type="submit">
                 <Icon name="plus" />
@@ -317,26 +358,28 @@ export default async function ProjectTasksPage({
         </div>
 
         {orphans > 0 && agents.length > 0 && (
-          <form className="row notice slim" method="post" action="/api/tasks">
-            <Back path={path} />
-            <input type="hidden" name="intent" value="assign-unassigned" />
-            <input type="hidden" name="projectId" value={project.id} />
+          <div className="notice slim">
             <span style={{ fontSize: 14, color: "var(--accent-ink)" }}>
               Ничьих задач: {orphans} — их не видит ни один агент.
             </span>
             <span className="spacer" />
-            <select name="tokenId">
-              {agents.map((token) => (
-                <option key={token.id} value={token.id}>
-                  {token.name}
-                </option>
-              ))}
-            </select>
-            <button className="plain" type="submit">
-              <Icon name="check" />
-              Назначить все
-            </button>
-          </form>
+            <form className="pill" method="post" action="/api/tasks">
+              <Back path={path} />
+              <input type="hidden" name="intent" value="assign-unassigned" />
+              <input type="hidden" name="projectId" value={project.id} />
+              <select name="tokenId">
+                {agents.map((token) => (
+                  <option key={token.id} value={token.id}>
+                    {token.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit">
+                <Icon name="check" />
+                Назначить все
+              </button>
+            </form>
+          </div>
         )}
 
         <Head

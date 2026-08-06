@@ -120,7 +120,7 @@ export default async function TokensPage({
 
         <Head title="Выпущенные" count={tokens.length}>
           <Reveal label="выпустить токен" icon="plus" drop>
-            <form className="row" method="post" action="/api/tokens">
+            <form className="pill" method="post" action="/api/tokens">
               <Back path={path} />
               <input type="hidden" name="intent" value="issue" />
               <input type="hidden" name="projectId" value={project.id} />
