@@ -79,6 +79,12 @@ describe("агент работает через MCP", () => {
     );
   });
 
+  it("отказывает по имени поля, не доходя до Prisma", async () => {
+    await expect(tool("read_document")).rejects.toThrow(/documentId/);
+    await expect(tool("read_document")).rejects.not.toThrow(/Prisma/);
+    await expect(tool("my_tasks", { includeFuture: "да" })).rejects.toThrow(/includeFuture.*boolean/);
+  });
+
   it("отдаёт цель проекта, а пока её нет — говорит об этом словами", async () => {
     expect((await tool("project_info")).goal).toBe("цель не задана");
 

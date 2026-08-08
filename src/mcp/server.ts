@@ -2,7 +2,7 @@ import { agent } from "../domain/author";
 import { DomainError } from "../domain/errors";
 import { authenticateToken } from "../domain/tokens";
 import { logError } from "../log";
-import { TOOLS, type McpContext } from "./tools";
+import { TOOLS, validateArgs, type McpContext } from "./tools";
 
 // ponytail: JSON-RPC поверх одного POST — SSE и сессии MCP-серверу без
 // подписок не нужны, поэтому и SDK не нужен.
@@ -83,7 +83,9 @@ export async function handleMcpRequest(request: Request, projectSlug: string): P
       if (!tool) return rpcError(rpc.id, -32602, `Инструмента «${rpc.params?.name}» нет`);
 
       try {
-        const result = await tool.run(rpc.params?.arguments ?? {}, ctx);
+        const args = rpc.params?.arguments ?? {};
+        validateArgs(tool.inputSchema, args);
+        const result = await tool.run(args, ctx);
         return ok(rpc.id, {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         });

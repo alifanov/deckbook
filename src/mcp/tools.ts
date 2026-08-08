@@ -58,6 +58,26 @@ export type Tool = {
 const str = (description: string) => ({ type: "string", description });
 const bool = (description: string) => ({ type: "boolean", description });
 
+/**
+ * Схема инструмента — договор, а не украшение витрины: до домена и БД доходят
+ * только аргументы, которые ей отвечают. Иначе `undefined` уезжает в Prisma и
+ * агенту возвращается дамп внутренней модели вместо имени пропущенного поля.
+ */
+// ponytail: presence + тип — всё, что описывают наши схемы; полноценный
+// валидатор JSON Schema завозить, когда появятся вложенные объекты и enum
+export function validateArgs(schema: JsonSchema, args: Record<string, unknown>): void {
+  for (const name of schema.required ?? []) {
+    if (args[name] === undefined || args[name] === null)
+      fail(`Не передан обязательный аргумент «${name}»`);
+  }
+  for (const [name, value] of Object.entries(args)) {
+    if (value === undefined || value === null) continue;
+    const expected = (schema.properties[name] as { type?: string } | undefined)?.type;
+    if (expected && typeof value !== expected)
+      fail(`Аргумент «${name}» должен быть ${expected}, а не ${typeof value}`);
+  }
+}
+
 /** Срок отдаётся днём и сразу с приговором — агенту не нужно считать даты. */
 const due = (task: { dueAt: Date | null }) =>
   task.dueAt ? { dueAt: asDay(task.dueAt), overdue: isOverdue(task) } : {};
