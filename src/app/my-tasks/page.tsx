@@ -63,11 +63,11 @@ export default async function MyTasksPage({
                 >
                   {task.title}
                 </Link>
-                <Link href={`/projects/${task.project.slug}`} className="muted">
+                <Link href={`/projects/${task.project.slug}`} className="muted proj">
                   {task.project.name}
                 </Link>
                 {/* пустые ячейки нужны колонкам: без них соседи съезжают влево */}
-                <span>
+                <span className="prio">
                   <Prio task={task} />
                 </span>
                 <span>
