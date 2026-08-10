@@ -292,6 +292,11 @@ form.row {
   margin: 0;
 }
 
+label.row {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* ── оправа: поле и кнопка одной деталью ───────────────────────────── */
 
 .pill {
