@@ -640,6 +640,21 @@ details.reveal.drop > .pop textarea {
   color: var(--dim);
 }
 
+/* Сводный список: почти каждая строка здесь — needs_human, и статус красил её
+   целиком. Цвет несёт колонка, а не строка: название — чернила, проект —
+   акцент, важность — вес, красное остаётся только за просрочкой и статусом. */
+.list.cols .item > a.grow {
+  color: var(--ink);
+  font-weight: 500;
+}
+.list.cols .item > a.proj {
+  color: var(--accent-ink);
+}
+.list.cols .item > .prio .bad {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .dot {
   width: 8px;
   height: 8px;
