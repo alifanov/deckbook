@@ -35,12 +35,12 @@ export async function register() {
       headers,
     }),
     logRecordProcessors: [
-      new sdkLogs.BatchLogRecordProcessor(
-        new OTLPLogExporter({
+      new sdkLogs.BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({
           url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs`,
           headers,
         }),
-      ),
+      }),
     ],
     instrumentations: [
       // ponytail: pg-инструментация из набора уже даёт спаны запросов

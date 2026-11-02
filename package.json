@@ -15,12 +15,12 @@
   "packageManager": "pnpm@10.9.0",
   "dependencies": {
     "@opentelemetry/api": "~1.9.1",
-    "@opentelemetry/api-logs": "~0.218.0",
-    "@opentelemetry/auto-instrumentations-node": "~0.76.0",
-    "@opentelemetry/exporter-logs-otlp-http": "~0.218.0",
-    "@opentelemetry/exporter-trace-otlp-http": "~0.218.0",
+    "@opentelemetry/api-logs": "~0.221.0",
+    "@opentelemetry/auto-instrumentations-node": "~0.79.0",
+    "@opentelemetry/exporter-logs-otlp-http": "~0.221.0",
+    "@opentelemetry/exporter-trace-otlp-http": "~0.221.0",
     "@opentelemetry/resources": "~2.7.1",
-    "@opentelemetry/sdk-node": "~0.218.0",
+    "@opentelemetry/sdk-node": "~0.221.0",
     "@opentelemetry/semantic-conventions": "~1.41.1",
     "@prisma/adapter-pg": "~7.9.1",
     "@prisma/client": "~7.9.1",
@@ -41,7 +41,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@opentelemetry/core": ">=2.8.0",
+      "@opentelemetry/core": ">=2.9.0 <3",
       "@grpc/grpc-js": ">=1.14.5",
       "postcss": ">=8.5.18",
       "sharp": ">=0.35.4",
@@ -49,7 +49,8 @@
       "deepmerge-ts": ">=8.0.0",
       "nanoid": ">=3.3.18 <4",
       "mysql2": ">=3.23.1",
-      "fast-uri": ">=3.1.6"
+      "fast-uri": ">=4.2.3",
+      "markdown-it": ">=15.0.3"
     }
   }
 }
