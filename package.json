@@ -46,6 +46,7 @@
       "postcss": ">=8.5.18",
       "sharp": ">=0.35.4",
       "@opentelemetry/propagator-jaeger": ">=2.9.0",
+      "@opentelemetry/instrumentation-http": "~0.222.0",
       "deepmerge-ts": ">=8.0.0",
       "nanoid": ">=3.3.18 <4",
       "mysql2": ">=3.23.1",
